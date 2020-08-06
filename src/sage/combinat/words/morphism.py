@@ -90,8 +90,7 @@ Many other functionalities...::
 # ****************************************************************************
 from __future__ import print_function
 
-from itertools import chain
-from itertools import islice
+from itertools import chain, islice
 
 from sage.misc.callable_dict import CallableDict
 from sage.structure.sage_object import SageObject
@@ -3188,16 +3187,16 @@ class WordMorphism(SageObject):
     def is_injective(self):
         r"""
         TODO
-        
+
         EXAMPLES::
-        
+
             sage: WordMorphism('a->0,b->10,c->110,d->111').is_injective()
             True
             sage: WordMorphism('a->0,b->010,c->01,d->10').is_injective()
             False
-            
+
         TEST::
-        
+
             sage: WordMorphism('a->10,b->00,c->11,d->110').is_injective()
             True
             sage: WordMorphism('a->0,b->0,c->1,d->1').is_injective()
@@ -3223,12 +3222,11 @@ class WordMorphism(SageObject):
         # Tail 't' is a word such that a = bt or b = at, where either both 'a' and 'b' are "code words",
         # or 'a' is a code word and 'b' is another tail.
         # Morphism is injective iff no tail is equal to a code word.
-        
+
         # A stack is used for keeping track of tails we still have to check.
         tails_stack = []
-        # A set is used to quickly check whether we saw this tail already.  
+        # A set is used to quickly check whether we saw this tail already.
         tails_set = set()
-        
         # In the first part of the algorithm we check the case where both 'a' and 'b' are code words.
         for i, v1 in enumerate(values):
             for v2 in islice(values, i + 1, None):
@@ -3242,4 +3240,3 @@ class WordMorphism(SageObject):
                     return False
         # No tail was equal to a codeword, morphism is injective.
         return True
-    
