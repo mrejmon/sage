@@ -90,6 +90,7 @@ Many other functionalities...::
 # ****************************************************************************
 from __future__ import print_function
 
+from collections import namedtuple
 from itertools import chain
 
 from sage.misc.callable_dict import CallableDict
@@ -103,7 +104,7 @@ from sage.rings.integer_ring import IntegerRing
 from sage.rings.integer import Integer
 from sage.modules.free_module_element import vector
 from sage.matrix.constructor import Matrix
-from sage.combinat.words.word import FiniteWord_class
+from sage.combinat.words.word import FiniteWord_class, Word
 from sage.combinat.words.words import FiniteWords, FiniteOrInfiniteWords
 
 
@@ -3164,3 +3165,96 @@ class WordMorphism(SageObject):
                 basis.extend((factor[0])(M).right_kernel().basis())
 
         return M._column_ambient_module().change_ring(QQ).subspace(basis)
+
+    def _cmp_all(self, State, stack, cmp_suffixes, i, j, ctx):
+        r"""
+        TODO
+        """
+        # For each substitution in self.
+        for src, target in self._morph.items():
+            # For each suffix of each substitution (only when cmp_suffixes=True).
+            # Compare with curr[i:] and add a state to the stack if a match is found.
+            for y in range(len(target)):
+                x = i
+                # We can assume target is not empty and i < curr_size.
+                while ctx.curr[x] == target[y]:
+                    x += 1
+                    y += 1
+                    if x == ctx.curr_size or y == len(target):
+                        stack.append(State(x, j, src, ctx))
+                        break
+                if not cmp_suffixes:
+                    break
+
+    def has_factor_in_language(self, initial, factor, verbose=False):
+        r"""
+        Checks whether the word ``factor`` is a factor of any word from the language created
+        by repeatedly applying self to the word ``initial``.
+
+        TODO
+
+        EXAMPLES::
+
+            sage: fib = WordMorphism('a->ab,b->a')
+            sage: fib.has_factor_in_language('a', 'aabaab')
+            True
+            sage: fib.has_factor_in_language('a', 'ababab')
+            False
+        """
+        # Check morphism is an endomorphism & non-erasing.
+        if not self.is_endomorphism() or self.is_erasing():
+            raise TypeError('TODO')
+        # Check if input falls into the morphism's domain.
+        initial = self.domain()(initial)
+        factor = self.domain()(factor)
+        # Edge case.
+        if factor.is_factor(initial):
+            return True
+        # Algorithm needs to bactrack if it gets into a dead end -> states are kept in a stack.
+        stack = []
+        # Named tuples are used for clarity.
+        # curr: list of letters we are currently trying to desubstitute
+        # curr_size: size of the above, can be smaller than len(curr) since we don't know
+        # how big 'next' should be when we create it, so we set it to the maximal size possible,
+        # which is probably more than it will be (and then 'next' is converted to 'curr' with a ptr swap).
+        # next: list of desubstituted letters
+        # 'curr' and 'next' are lists to allow for easy assignment at random spots.
+        Ctx = namedtuple('Ctx', 'curr curr_size next')
+        # i: where in 'curr' to start next comparison with morphism targets
+        # j: size of 'next' so far
+        # nextl: next desubstituted letter to be assigned in 'next' on position 'j' when this state is popped
+        # (this is not done immediately because 'next' is shared between multiple states)
+        # ctx: the tuple described above shared between states working on the same 'curr'.
+        State = namedtuple('State', 'i j nextl ctx')
+        # 'prev' is used to prevent endless loops and also as a memoization tool.
+        prev = set([factor])
+
+        # First comparison has to be done outside the loop, due to the way the while loop is written.
+        self._cmp_all(State, stack, True, 0, 0, Ctx(list(factor), len(factor), [None] * len(factor)))
+
+        while len(stack) != 0:
+            st = stack.pop()
+            # Always update 'next'. We should add 1 to st.j now, but namedtuples are immutable.
+            st.ctx.next[st.j] = st.nextl
+            # If 'current' is not fully desubstituted, just continue comparing.
+            if st.i != st.ctx.curr_size:
+                self._cmp_all(State, stack, False, st.i, st.j + 1, st.ctx)
+            # Else check few things and prepare a new context.
+            else:
+                # Convert 'next' to a word to make it comparable and hashable.
+                next_word = Word(st.ctx.next[:st.j + 1])
+                # Some debugging.
+                if verbose:
+                    print('{} -> {}'.format(Word(st.ctx.curr[:st.ctx.curr_size]), next_word))
+                # If we desubstituted to the initial word (or its factor), we have succeeded.
+                if next_word.is_factor(initial):
+                    return True
+                # If we saw the next word previously, continue with the next state.
+                elif next_word in prev:
+                    continue
+                # Finally, if we see the next word for the first time, add it to the set of previous words.
+                else:
+                    prev.add(next_word)
+                # Now we can start comparing.
+                self._cmp_all(State, stack, True, 0, 0, Ctx(st.ctx.next, st.j + 1, [None] * (st.j + 1)))
+        return False
