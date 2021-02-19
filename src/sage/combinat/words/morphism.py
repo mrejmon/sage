@@ -3163,3 +3163,6 @@ class WordMorphism(SageObject):
                 basis.extend((factor[0])(M).right_kernel().basis())
 
         return M._column_ambient_module().change_ring(QQ).subspace(basis)
+
+    # Probably temporary.
+    from .DOL import is_injective # * doesn't work here.
