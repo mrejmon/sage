@@ -71,3 +71,69 @@ def is_injective(self):
                 return False
     # No tail was equal to a codeword, morphism is injective.
     return True
+
+def simplify(self):
+    """
+
+    EXAMPLES::
+
+        a = WordMorphism('a->bca,b->bcaa,c->bcaaa'); a.simplify()
+        b = WordMorphism('a->abc,b->bc,c->a'); b.simplify()
+        c = WordMorphism('a->aca,b->badc,c->acab,d->adc'); c.simplify()
+        d = WordMorphism('a->1,b->011,c->01110,d->1110'); d.simplify()
+
+    """
+    # Helper function, invariant: val1.empty() == False.
+    def _helper(val1, val2):
+        # Remove prefixes.
+        if val1.length() > val2.length():
+            return val2
+        a, b = 0, 0
+        while True:
+            if val1[a] != val2[b]:
+                break
+            a += 1
+            b += 1
+            if a == val1.length():
+                a = 0
+            if b == val2.length():
+                break
+        # Remove suffixes.
+        if val1.length() > val2.length()-(b-a):
+            return val2[b-a:]
+        c, d = val1.length()-1, val2.length()-1
+        while True:
+            if val1[c] != val2[d]:
+                break
+            c -= 1
+            d -= 1
+            if c == -1:
+                c = val1.length()-1
+            if d == (b-a)-1:
+                break
+        return val2[b-a:d+val1.length()-c]
+
+    # Setup.
+    g = dict(self._morph)
+    to_do = set(self._morph)
+    to_remove = []
+
+    while to_do:
+        key1 = to_do.pop()
+        val1 = g[key1]
+        for key2, val2 in g.items():
+            if key1 == key2:
+                continue
+            res = _helper(val1, val2)
+            if len(res) == 0:
+                to_remove.append(key2)
+                to_do.discard(key2)
+            elif len(res) != len(val2):
+                assert(len(res) < len(val2))
+                g[key2] = res
+                to_do.add(key2)
+        for key in to_remove:
+            del g[key]
+        to_remove = []
+
+    return g
