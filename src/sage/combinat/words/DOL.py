@@ -103,8 +103,8 @@ def is_simplifiable(self, alphabet, *, bool_only=False):
         for letter in to_remove:
             del g_wip[letter]
         for letter, image in g_wip.items():
-            image_iter = map(lambda x: '' if x in to_remove else x, image)
-            g_wip[letter] = self._codomain(list(image_iter), datatype='list')
+            new_image = [x for x in image if x not in to_remove]
+            g_wip[letter] = self._codomain(new_image, datatype='list', check=False)
         to_remove = []
 
     # Simplify (find morphism g).
