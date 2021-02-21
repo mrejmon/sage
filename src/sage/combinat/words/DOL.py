@@ -88,16 +88,27 @@ def is_simplifiable(self, alphabet, *, bool_only=False):
          WordMorphism: x->aca, y->adc, z->b)
         sage: d = WordMorphism('a->1,b->011,c->01110,d->1110'); d.is_simplifiable('xyz')
         (True, WordMorphism: a->y, b->xyy, c->xyyyx, d->yyyx, WordMorphism: x->0, y->1)
-
+        sage: e = WordMorphism('a->abc,b->bc,c->a,f->'); e.is_simplifiable('xy')
+        (True, WordMorphism: a->xy, b->y, c->x, f->, WordMorphism: x->a, y->bc)
     """
-    # Remove epsilon rules
-    # TODO
-
-    # Simplify.
-    g_wip = dict(self._morph)
-    to_do = set(self._morph)
+    # Remove erasing letters.
     to_remove = []
+    for letter, image in self._morph.items():
+        if not image:
+            to_remove.append(letter)
+    g_wip = dict(self._morph)
+    if to_remove:
+        if bool_only:
+            return False
+        for letter in to_remove:
+            del g_wip[letter]
+        for letter, image in g_wip.items():
+            image_iter = map(lambda x: '' if x in to_remove else x, image)
+            g_wip[letter] = self._codomain(list(image_iter), datatype='list')
+        to_remove = []
 
+    # Simplify (find morphism g).
+    to_do = set(g_wip)
     while to_do:
         key1 = min(to_do)
         to_do.remove(key1)
@@ -137,7 +148,7 @@ def is_simplifiable(self, alphabet, *, bool_only=False):
     Z = alphabet[:len(g_wip)] if alphabet else self._domain.alphabet()[:len(g_wip)]
     g = {letter : image for letter, image in zip(Z, g_wip.values())}
 
-    # Create f by using g on self "reversely".
+    # Find f by using g on self "in reverse".
     f = {}
     for letter1, image1 in self._morph.items():
         image3 = []
@@ -147,11 +158,11 @@ def is_simplifiable(self, alphabet, *, bool_only=False):
                     image1 = image1[image2.length():]
                     image3.append(letter2)
                     break
-            if image1.is_empty():
+            if not image1:
                 break
         f[letter1] = image3
 
-    X, Y = self._domain.alphabet(), self._codomain.alphabet()
-    f = type(self)(f, domain=FiniteWords(X), codomain=FiniteWords(Z))
-    g = type(self)(g, domain=FiniteWords(Z), codomain=FiniteWords(Y))
+    FW_Z = FiniteWords(Z)
+    f = type(self)(f, domain=self._domain, codomain=FW_Z)
+    g = type(self)(g, domain=FW_Z, codomain=self._codomain)
     return True, f, g
