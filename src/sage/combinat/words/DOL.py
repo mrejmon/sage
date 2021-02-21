@@ -1,4 +1,5 @@
 from itertools import islice
+from sage.combinat.words.words import FiniteWords
 
 def is_injective(self):
     """
@@ -72,68 +73,85 @@ def is_injective(self):
     # No tail was equal to a codeword, morphism is injective.
     return True
 
-def simplify(self):
+def is_simplifiable(self, alphabet, *, bool_only=False):
     """
 
     EXAMPLES::
 
-        a = WordMorphism('a->bca,b->bcaa,c->bcaaa'); a.simplify()
-        b = WordMorphism('a->abc,b->bc,c->a'); b.simplify()
-        c = WordMorphism('a->aca,b->badc,c->acab,d->adc'); c.simplify()
-        d = WordMorphism('a->1,b->011,c->01110,d->1110'); d.simplify()
+        sage: a = WordMorphism('a->bca,b->bcaa,c->bcaaa'); a.is_simplifiable('xy')
+        (True, WordMorphism: a->xy, b->xyy, c->xyyy, WordMorphism: x->bc, y->a)
+        sage: b = WordMorphism('a->abc,b->bc,c->a'); b.is_simplifiable('xy')
+        (True, WordMorphism: a->xy, b->y, c->x, WordMorphism: x->a, y->bc)
+        sage: c = WordMorphism('a->aca,b->badc,c->acab,d->adc'); c.is_simplifiable('xyz')
+        (True,
+         WordMorphism: a->x, b->zy, c->xz, d->y,
+         WordMorphism: x->aca, y->adc, z->b)
+        sage: d = WordMorphism('a->1,b->011,c->01110,d->1110'); d.is_simplifiable('xyz')
+        (True, WordMorphism: a->y, b->xyy, c->xyyyx, d->yyyx, WordMorphism: x->0, y->1)
 
     """
-    # Helper function, invariant: val1.empty() == False.
-    def _helper(val1, val2):
-        # Remove prefixes.
-        if val1.length() > val2.length():
-            return val2
-        a, b = 0, 0
-        while True:
-            if val1[a] != val2[b]:
-                break
-            a += 1
-            b += 1
-            if a == val1.length():
-                a = 0
-            if b == val2.length():
-                break
-        # Remove suffixes.
-        if val1.length() > val2.length()-(b-a):
-            return val2[b-a:]
-        c, d = val1.length()-1, val2.length()-1
-        while True:
-            if val1[c] != val2[d]:
-                break
-            c -= 1
-            d -= 1
-            if c == -1:
-                c = val1.length()-1
-            if d == (b-a)-1:
-                break
-        return val2[b-a:d+val1.length()-c]
+    # Remove epsilon rules
+    # TODO
 
-    # Setup.
-    g = dict(self._morph)
+    # Simplify.
+    g_wip = dict(self._morph)
     to_do = set(self._morph)
     to_remove = []
 
     while to_do:
-        key1 = to_do.pop()
-        val1 = g[key1]
-        for key2, val2 in g.items():
+        key1 = min(to_do)
+        to_do.remove(key1)
+        val1 = g_wip[key1]
+        for key2, val2 in g_wip.items():
             if key1 == key2:
                 continue
-            res = _helper(val1, val2)
-            if len(res) == 0:
-                to_remove.append(key2)
-                to_do.discard(key2)
-            elif len(res) != len(val2):
-                assert(len(res) < len(val2))
-                g[key2] = res
-                to_do.add(key2)
+            if len(val1) == len(val2):
+                if val1 == val2:
+                    to_remove.append(key2)
+                    to_do.discard(key2)
+            elif len(val1) < len(val2):
+                if val1.is_prefix(val2):
+                    g_wip[key2] = val2[len(val1):]
+                    to_do.add(key2)
+                elif val1.is_suffix(val2):
+                    g_wip[key2] = val2[:-len(val1)]
+                    to_do.add(key2)
+            else:
+                if val2.is_prefix(val1):
+                    g_wip[key1] = val1[len(val2):]
+                    to_do.add(key1)
+                    break
+                elif val2.is_suffix(val1):
+                    g_wip[key1] = val1[:-len(val2)]
+                    to_do.add(key1)
+                    break
         for key in to_remove:
-            del g[key]
+            del g_wip[key]
         to_remove = []
 
-    return g
+    if len(g_wip) == len(self._domain.alphabet()):
+        return False if bool_only else (False, None, None)
+    elif bool_only:
+        return True
+
+    Z = alphabet[:len(g_wip)] if alphabet else self._domain.alphabet()[:len(g_wip)]
+    g = {letter : image for letter, image in zip(Z, g_wip.values())}
+
+    # Create f by using g on self "reversely".
+    f = {}
+    for letter1, image1 in self._morph.items():
+        image3 = []
+        while True:
+            for letter2, image2 in g.items():
+                if image1[:image2.length()] == image2:
+                    image1 = image1[image2.length():]
+                    image3.append(letter2)
+                    break
+            if image1.is_empty():
+                break
+        f[letter1] = image3
+
+    X, Y = self._domain.alphabet(), self._codomain.alphabet()
+    f = type(self)(f, domain=FiniteWords(X), codomain=FiniteWords(Z))
+    g = type(self)(g, domain=FiniteWords(Z), codomain=FiniteWords(Y))
+    return True, f, g
