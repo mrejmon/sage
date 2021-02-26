@@ -10,3 +10,4 @@ from .word_options import WordOptions
 from .word_generators import words
 from .words import Words, FiniteWords, InfiniteWords
 from .lyndon_word import LyndonWord, LyndonWords, StandardBracketedLyndonWords
+from .DOL_test import *

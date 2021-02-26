@@ -3165,4 +3165,4 @@ class WordMorphism(SageObject):
         return M._column_ambient_module().change_ring(QQ).subspace(basis)
 
     # Probably temporary.
-    from .DOL import is_injective, is_simplifiable, _test_is_simplifiable # * doesn't work here.
+    from .DOL import is_injective, is_simplifiable, bounded_letters # * doesn't work here.

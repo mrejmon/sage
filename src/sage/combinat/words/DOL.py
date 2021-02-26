@@ -12,7 +12,7 @@ def is_injective(self):
         sage: WordMorphism('a->0,b->010,c->01,d->10').is_injective()
         False
 
-    TEST::
+    TESTS::
 
         sage: WordMorphism('a->10,b->00,c->11,d->110').is_injective()
         True
@@ -166,74 +166,72 @@ def is_simplifiable(self, return_fg=False, alphabet=None):
     g = type(self)(g, domain=FW_Z, codomain=self._codomain)
     return True, f, g
 
-# ------------------------------------------------------------------------------
-# ==============================================================================
-# ------------------------------------------------------------------------------
-
-import random
-import string
-import builtins
-def _test_is_simplifiable(self, a1=3, a2=4, a3=5, i1=0, i2=5, i3=10, cnt=10, seed=18, debug=True):
+def bounded_letters(self):
     """
 
     EXAMPLES::
 
-        sage: WordMorphism('x->x')._test_is_simplifiable(2, 5, 26, 1, 5, 100, cnt=100000, debug=False) # long time
-        100000 [81769, 2841, 2081, 537]
+        sage: WordMorphism('a->ab,b->ba').bounded_letters()
+        []
+        sage: WordMorphism('a->abc,b->b,c->,d->dd').bounded_letters()
+        ['b', 'c']
+        sage: WordMorphism('a->ab,b->a,c->b').bounded_letters()
+        []
+        sage: WordMorphism('a->b,b->a').bounded_letters()
+        ['a', 'b']
+        sage: WordMorphism('a->b,b->c,c->a').bounded_letters()
+        ['a', 'b', 'c']
     """
-    def geometric_sample(EX, start, end):
-        p = 1/EX
-        i = start
-        while i < end and random.random() < (1-p):
-            i += 1
-        return i
-    def create_random_morphism():
-        h = dict()
-        # X_size = random.randint(2, 10)
-        X_size = geometric_sample(a2, a1, a3)
-        X = string.ascii_lowercase[:X_size]
-        for letter in X:
-            image_size = geometric_sample(i2, i1, i3)
-            h[letter] = random.choices(X, k=image_size)
-        return type(self)(h)
-    def test_morphism(h, debug=True, cnters = [0, 0, 0, 0]):
-        if debug: print('\r----------------------------------------------------------------')
-        if debug: print(f'H: {h}')
-        is_injective = h.is_injective()
-        if debug: print(f'is_injective: {is_injective}')
-        is_simplifiable, f, g = h.is_simplifiable(True, Z)
-        if debug: print(f'is_simplifiable: {is_simplifiable}')
-        if not is_simplifiable:
-            assert(is_injective)
-            if debug: print('Interesting1!') # Says is not simplifiable, can't really test it.
-            cnters[0] += 1
-        else:
-            if debug: print(f'G: {g}\nF: {f}')
-            k = f * g
-            if debug: print(f'K: {k}')
-            h2 = g * f
-            if debug: print(f'H?: {g * f}')
-            assert(h == g * f) # Says is simplifiable, we can test it!
-            if is_injective:
-                if debug: print('Interesting2!') # Injective but simplefiable, rare.
-                cnters[1] += 1
-            if not k.is_injective():
-                if debug: print('Interesting3!') # Simplification is not injective, rare.
-                cnters[2] += 1
-                # assert(any(len(x) < 2 for x in h._morph.values())) nah
-            elif k.is_simplifiable():
-                if debug: print('Interesting4!') # Simplification is injective but simplifiable, rare.
-                cnters[3] += 1
-                # assert(any(len(x) < 2 for x in h._morph.values())) nah
-    assert(cnt > 0)
-    random.seed(seed)
-    Z = string.ascii_uppercase
-    cnters = [0, 0, 0, 0]
-    print2 = print
-    # if not debug: builtins.print = lambda x: None
-    for i in range(cnt):
-        if not debug: print2(f'\r{i}                    ', end='')
-        h = create_random_morphism()
-        test_morphism(h, debug, cnters)
-    print2(f'\r{cnt} {cnters}')
-    # builtins.print = print2
+    assert(all(x in self._domain.alphabet() for x in self._codomain.alphabet()))
+
+    bounded = set()
+    unbounded = dict()
+    undecided = dict()
+
+    # Change alphabet into integers 0 ... n-1 so that we can add a letter
+    # for sure not in the alphabet.
+    alphabet = self._domain.alphabet()
+    to_integer = {e : i for i, e in enumerate(alphabet)}
+    for letter, image in self._morph.items():
+        unbounded[to_integer[letter]] = [to_integer[x] for x in image]
+    terminal = -1
+
+    # Split letters into bounded, unbounded and undecided.
+    while True:
+        for letter1, image1 in unbounded.items():
+            if not image1:
+                bounded.add(letter1)
+                del unbounded[letter1]
+                for letter2, image2 in unbounded.items():
+                    unbounded[letter2] = [x for x in image2 if x != letter1]
+                break
+            elif all(x == terminal for x in image1) or (len(image1) == 1 and image1[0] == letter1):
+                bounded.add(letter1)
+                del unbounded[letter1]
+                for letter2, image2 in unbounded.items():
+                    unbounded[letter2] = [x if x != letter1 else terminal for x in image2]
+                break
+            elif len(image1) == 1:
+                undecided[letter1] = image1
+                del unbounded[letter1]
+                for letter2, image2 in unbounded.items():
+                    unbounded[letter2] = [x if x != letter1 else image1[0] for x in image2]
+                break
+        else: # no break
+            break
+
+    # Decide undecided letters.
+    while True:
+        for letter, image in undecided.items():
+            if image[0] in bounded:
+                bounded.add(letter)
+                del undecided[letter]
+                break
+            elif image[0] in unbounded:
+                unbounded[letter] = image
+                del undecided[letter]
+                break
+        if not undecided:
+            break
+
+    return [alphabet[x] for x in sorted(bounded)]
