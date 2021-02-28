@@ -73,36 +73,12 @@ def is_injective(self):
     # No tail was equal to a codeword, morphism is injective.
     return True
 
-def is_simplifiable(self, return_fg=False, alphabet=None):
-    """
-
-    EXAMPLES::
-
-        sage: a = WordMorphism('a->bca,b->bcaa,c->bcaaa'); a.is_simplifiable(True, 'xy')
-        (True, WordMorphism: a->xy, b->xyy, c->xyyy, WordMorphism: x->bc, y->a)
-        sage: b = WordMorphism('a->abc,b->bc,c->a'); b.is_simplifiable(True, 'xy')
-        (True, WordMorphism: a->xy, b->y, c->x, WordMorphism: x->a, y->bc)
-        sage: c = WordMorphism('a->aca,b->badc,c->acab,d->adc'); c.is_simplifiable(True, 'xyz')
-        (True,
-         WordMorphism: a->x, b->zy, c->xz, d->y,
-         WordMorphism: x->aca, y->adc, z->b)
-        sage: d = WordMorphism('a->1,b->011,c->01110,d->1110'); d.is_simplifiable(True, 'xyz')
-        (True, WordMorphism: a->y, b->xyy, c->xyyyx, d->yyyx, WordMorphism: x->0, y->1)
-        sage: e = WordMorphism('a->abc,b->bc,c->a,f->'); e.is_simplifiable(True, 'xy')
-        (True, WordMorphism: a->xy, b->y, c->x, f->, WordMorphism: x->a, y->bc)
-        sage: f = WordMorphism('a->a,b->,c->c'); f.is_simplifiable(True, 'xy')
-        (True, WordMorphism: a->x, b->, c->y, WordMorphism: x->a, y->c)
-
-        # add example which is still simplifiable after simplification
-    """
+def _simplify_injective_once(self, alphabet=None):
     # Remove erasing letters.
     g_wip = dict(self._morph)
     for letter, image in self._morph.items():
         if not image:
             del g_wip[letter]
-
-    if not return_fg and len(g_wip) < len(self._morph):
-        return True
 
     # Simplify (find morphism g).
     to_do = set(g_wip)
@@ -139,10 +115,8 @@ def is_simplifiable(self, return_fg=False, alphabet=None):
             del g_wip[letter]
         to_remove = []
 
-    if not return_fg:
-        return len(g_wip) < len(self._morph)
-    elif len(g_wip) == len(self._morph):
-        return False, None, None
+    if len(g_wip) == len(self._morph):
+        raise ValueError(f'failed to simplify {self}')
 
     Z = alphabet[:len(g_wip)] if alphabet else self._domain.alphabet()[:len(g_wip)]
     g = {letter : image for letter, image in zip(Z, g_wip.values())}
@@ -164,37 +138,74 @@ def is_simplifiable(self, return_fg=False, alphabet=None):
     FW_Z = FiniteWords(Z)
     f = type(self)(f, domain=self._domain, codomain=FW_Z)
     g = type(self)(g, domain=FW_Z, codomain=self._codomain)
-    return True, f, g
+    return f, g
 
-def bounded_letters(self):
+def simplify_injective(self, alphabet=None):
     """
+    TODO
+
+    If self is not injective, return a triplet (k, f, g), where k is a injective
+    simplification of self with respect to (f, g).
+
+    Let h be a morphism X^*->X^*. If h is not injective, then there exist morphisms
+    f: X^*->Z^* and g: Z^*->X^* such that h = g o f, k = f o g is injective and #Z < #X.
+    The morphism k is then called the injective simplification of h with respect to (f, g).
+
+    # RE 83
+    # if self is injective
 
     EXAMPLES::
 
-        sage: WordMorphism('a->ab,b->ba').bounded_letters()
-        []
-        sage: WordMorphism('a->abc,b->b,c->,d->dd').bounded_letters()
-        ['b', 'c']
-        sage: WordMorphism('a->ab,b->a,c->b').bounded_letters()
-        []
-        sage: WordMorphism('a->b,b->a').bounded_letters()
+        sage: a = WordMorphism('a->bca,b->bcaa,c->bcaaa'); a.simplify_injective('xy')
+        (WordMorphism: a->xy, b->xyy, c->xyyy, WordMorphism: x->bc, y->a)
+        sage: b = WordMorphism('a->abc,b->bc,c->a'); b.simplify_injective('xy')
+        (WordMorphism: a->xy, b->y, c->x, WordMorphism: x->a, y->bc)
+        sage: c = WordMorphism('a->aca,b->badc,c->acab,d->adc'); c.simplify_injective('xyz')
+        (WordMorphism: a->x, b->zy, c->xz, d->y, WordMorphism: x->aca, y->adc, z->b)
+        sage: d = WordMorphism('a->1,b->011,c->01110,d->1110'); d.simplify_injective('xyz')
+        (WordMorphism: a->y, b->xyy, c->xyyyx, d->yyyx, WordMorphism: x->0, y->1) # nope
+        sage: e = WordMorphism('a->abc,b->bc,c->a,f->'); e.simplify_injective('xy')
+        (WordMorphism: a->xy, b->y, c->x, f->, WordMorphism: x->a, y->bc)
+        sage: f = WordMorphism('a->a,b->,c->c'); f.simplify_injective('xy')
+        (WordMorphism: a->x, b->, c->y, WordMorphism: x->a, y->c)
+    """
+    assert(all(x in self._domain.alphabet() for x in self._codomain.alphabet()))
+
+    f, g = _simplify_injective_once(self, alphabet)
+    k = f * g
+    while True:
+        try:
+            f_new, g_new = _simplify_injective_once(k, alphabet)
+            k, f, g = f_new * g_new, f_new * f, g * g_new # TODO
+        except:
+            return k, f, g
+
+def unbounded_letters(self):
+    """
+    TODO
+
+    EXAMPLES::
+
+        sage: sorted(WordMorphism('a->ab,b->ba').unbounded_letters())
         ['a', 'b']
-        sage: WordMorphism('a->b,b->c,c->a').bounded_letters()
+        sage: sorted(WordMorphism('a->abc,b->b,c->,d->dd').unbounded_letters())
+        ['a']
+        sage: sorted(WordMorphism('a->ab,b->a,c->b').unbounded_letters())
         ['a', 'b', 'c']
+        sage: sorted(WordMorphism('a->b,b->a').unbounded_letters())
+        []
+        sage: sorted(WordMorphism('a->b,b->c,c->a').unbounded_letters())
+        []
     """
     assert(all(x in self._domain.alphabet() for x in self._codomain.alphabet()))
 
     bounded = set()
-    unbounded = dict()
+    unbounded = dict(self._morph)
     undecided = dict()
 
-    # Change alphabet into integers 0 ... n-1 so that we can add a letter
-    # for sure not in the alphabet.
-    alphabet = self._domain.alphabet()
-    to_integer = {e : i for i, e in enumerate(alphabet)}
-    for letter, image in self._morph.items():
-        unbounded[to_integer[letter]] = [to_integer[x] for x in image]
-    terminal = -1
+    terminal = '#'
+    while terminal in self._codomain.alphabet():
+        terminal += '#'
 
     # Split letters into bounded, unbounded and undecided.
     while True:
@@ -234,4 +245,58 @@ def bounded_letters(self):
         if not undecided:
             break
 
-    return [alphabet[x] for x in sorted(bounded)]
+    return set(unbounded)
+
+# g = {0 : (6, '0'), 1 : (6, '1'), 2 : (0, '2'), 3 : (1, '3'), 4 : (4, '4'), 5 : (3, '5'), 6 : (3, '6'), 7 : (4, '7'), 8 : (0, '8')}
+# for x in functional_graph_cycle_iter(g): print(x)
+def _functional_graph_cycle_iter(graph):
+    visited, removed = set(), set()
+    for u in graph:
+        if u in removed:
+            continue
+        visited.add(u)
+        history_vertices = [u]
+        history_labels = []
+        while True:
+            v, label = graph[u]
+            history_labels.append(label)
+            if v in visited:
+                if v not in removed:
+                    i = history_vertices.index(v)
+                    yield history_labels[i:]
+                removed.update(history_vertices)
+                break
+            history_vertices.append(v)
+            visited.add(v)
+            u = v
+
+def is_pushy(self):
+    """
+
+    EXAMPLES::
+        sage: WordMorphism('0->012,1->2,2->1').is_pushy()
+        True
+        sage: WordMorphism('0->0123,1->2,2->1,3->123').is_pushy()
+        True
+    """
+    try:
+        injective_self, _, _ = self.simplify_injective()
+    except ValueError:
+        injective_self = self
+    unbounded = injective_self.unbounded_letters()
+    UL, UR = dict(), dict()
+    for u in unbounded:
+        hu = self._morph[u]
+        for i, v in enumerate(hu):
+            if v in unbounded:
+                break
+        UL[u] = v, hu[:i]
+        for i, v in enumerate(reversed(hu)):
+            if v in unbounded:
+                break
+        UR[u] = v, hu[hu.length()-i:]
+    for U in UL, UR:
+        for cycle in _functional_graph_cycle_iter(U):
+            if any(cycle):
+                return True
+    return False

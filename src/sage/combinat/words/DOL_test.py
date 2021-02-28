@@ -2,6 +2,8 @@ import random
 import string
 from functools import wraps
 from sage.combinat.words.morphism import WordMorphism
+from sage.combinat.words.words import FiniteWords
+from itertools import product
 
 def geometric_sample(EX, start, end):
     p = 1/EX
@@ -22,14 +24,22 @@ def create_random_morphism(a1=3, a2=4, a3=5, i1=0, i2=5, i3=10):
 def _test(logger=None):
     def decorator(f):
         @wraps(f)
-        def wrapper(a1=3, a2=4, a3=5, i1=0, i2=5, i3=10, cnt=10, seed=18, debug=True, **kwargs):
-            random.seed(seed)
-            for i in range(cnt):
-                print(f'\r{i}                    ', end='')
-                h = WordMorphism(create_random_morphism(a1, a2, a3, i1, i2, i3))
-                if debug: print(f'\n{h}')
-                f(h, debug, logger, **kwargs)
-            print(f'\r{cnt}')
+        def wrapper(a1=3, a2=4, a3=5, i1=0, i2=5, i3=10, cnt=10000, rndom=True, e1=3, e2=8, seed=18, debug=False, **kwargs):
+            if rndom:
+                random.seed(seed)
+                for i in range(cnt):
+                    print(f'\r{i}                    ', end='')
+                    h = WordMorphism(create_random_morphism(a1, a2, a3, i1, i2, i3))
+                    if debug: print(f'\n{h}')
+                    f(h, debug, logger, **kwargs)
+                print(f'\r{cnt}')
+            else:
+                F = FiniteWords(string.ascii_lowercase[:e1])
+                for i, h in enumerate(F.iter_morphisms((e1, e2+1))):
+                    print(f'\r{i}                    ', end='')
+                    if debug: print(f'\n{h}')
+                    f(h, debug, logger, **kwargs)
+                print(f'\r{i+1}')
             return logger
         return wrapper
     return decorator
@@ -49,29 +59,45 @@ def test_is_injective(h, debug, logger):
     if is_injective1: logger[0] += 1
 
 @_test()
-def test_bounded_letters(h, debug, logger):
-    bounded1 = set(h.bounded_letters())
-    if debug: print(sorted(bounded1))
+def test_unbounded_letters(h, debug, logger):
+    unbounded1 = set(h.unbounded_letters())
+    if debug: print(sorted(unbounded1))
     h._codomain = h._domain
-    bounded2 = set(h.domain().alphabet()) - set(h.growing_letters())
-    if debug: print(sorted(bounded2))
-    assert(bounded1 == bounded2)
+    unbounded2 = set(h.growing_letters())
+    if debug: print(sorted(unbounded2))
+    assert(unbounded1 == unbounded2)
+
+def _necessary_condition_for_elementary(self):
+    alph = [set(image) for image in self._morph.values()]
+    for x in product(*alph):
+        if len(set(x)) == len(x):
+            return True
+    return False
 
 @_test()
-def test_is_simplifiable(h, debug, logger):
-    is_injective = h.is_injective()
-    if debug: print(f'is_injective: {is_injective}')
-    is_simplifiable, f, g = h.is_simplifiable(True, string.ascii_uppercase)
-    if debug: print(f'is_simplifiable: {is_simplifiable}')
-    if not is_simplifiable:
-        assert(is_injective) # At least a partial test.
-    else:
-        if debug: print(f'G: {g}\nF: {f}')
-        k = f * g
-        if debug: print(f'K: {k}')
-        h2 = g * f
-        if debug: print(f'H?: {g * f}')
-        assert(h == g * f)
+def test_simplify_injective(h, debug, logger):
+    try:
+        k, f, g = h.simplify_injective(string.ascii_uppercase)
+    except ValueError:
+        if debug: print('failed to simplify')
+        assert(h.is_injective())
+    if debug: print(f'G: {g}\nF: {f}\nK: {k}')
+    assert(len(k._domain.alphabet()) < len(h._domain.alphabet()))
+    assert(k.is_injective())
+    h2 = g * f
+    if debug: print(f'H?: {h2}')
+    assert(h == h2)
+
+@_test()
+def find_counter_examples(h, debug, logger):
+    if len(h._morph) == len(set().union(*h._morph.values())):
+        try:
+            _ = h._simplify_injective_once(string.ascii_uppercase)
+        except ValueError:
+            ncfe = _necessary_condition_for_elementary(h)
+            if not ncfe:
+                print(h)
+                assert(h.is_injective())
 
 # ------------------------------------------------------------------------------
 # https://goo.gl/kkF5SY
@@ -96,7 +122,7 @@ def _LeftQuotient(ps, ws):
 
 def _IsUniquelyDecodable(cs_list):
   """Checks if the set of codewords cs is uniquely decodable via the
-  Sardinas-Patterson algorithm. Prints diagnostic output to err."""
+  Sardinas-Patterson algorithm."""
   cs = set(cs_list)
   if len(cs) < len(cs_list):
     return False
