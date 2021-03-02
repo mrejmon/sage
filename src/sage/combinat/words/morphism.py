@@ -2015,12 +2015,13 @@ class WordMorphism(SageObject):
 
         A = self.domain().alphabet()
         d = dict((letter,self(letter)[0]) for letter in A)
-
+        G = self.unbounded_letters() # <--
         res = []
         parent = self.codomain().shift()
         for cycle in get_cycles(CallableDict(d),A):
-            P = PeriodicPointIterator(self, cycle)
-            res.append([parent(P._cache[i]) for i in range(len(cycle))])
+            if cycle[0] in G: # <--
+                P = PeriodicPointIterator(self, cycle)
+                res.append([parent(P._cache[i]) for i in range(len(cycle))])
 
         return res
 
@@ -3165,5 +3166,5 @@ class WordMorphism(SageObject):
         return M._column_ambient_module().change_ring(QQ).subspace(basis)
 
     # Probably temporary.
-    from .DOL import is_injective, simplify_injective, unbounded_letters, is_pushy # * doesn't work here.
+    from .DOL import is_injective, simplify_injective, unbounded_letters, is_pushy, iter_inf_factors_with_growing_letter # * doesn't work here.
     from .DOL import _simplify_injective_once, _functional_graph_cycle_iter

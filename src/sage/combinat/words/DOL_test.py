@@ -99,6 +99,37 @@ def find_counter_examples(h, debug, logger):
                 print(h)
                 assert(h.is_injective())
 
+@_test([0])
+def tmp(h, debug, logger):
+    try:
+        f, g = h._simplify_injective_once()
+        k = f * g
+    except ValueError:
+        return
+    try:
+        f2, g2 = k._simplify_injective_once()
+        k2 = f2 * g2
+    except ValueError:
+        return
+    logger[0] += 1
+    if debug: print(f'k: {k}\nf: {f}\ng: {g}\nk2: {k2}\nf2: {f2}\ng2: {g2}')
+    F = f2 * f
+    G = g * g2
+    if debug: print(f'F = f2 * f: {F}\nG = g * g2: {G}\nF * G: {F * G}\nG * F: {G * F}')
+    assert(h**2 == G * F)
+    assert(k2**2 == F * G)
+
+@_test()
+def tmp2(h, debug, logger):
+    h._codomain = h._domain
+    gen = h.iter_inf_factors_with_growing_letter()
+    lst = list(gen)
+    if not lst:
+        return
+    print(h)
+    for x in lst:
+        print(x)
+
 # ------------------------------------------------------------------------------
 # https://goo.gl/kkF5SY
 # https://gist.github.com/lcpz/fc02cbf6f0108259302ee4b7d9924dbe

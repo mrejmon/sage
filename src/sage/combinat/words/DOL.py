@@ -1,5 +1,7 @@
-from itertools import islice
+from itertools import islice, count
 from sage.combinat.words.words import FiniteWords
+from sage.combinat.words.morphism import get_cycles, PeriodicPointIterator
+from collections import Counter
 
 def is_injective(self):
     """
@@ -169,16 +171,15 @@ def simplify_injective(self, alphabet=None):
         sage: f = WordMorphism('a->a,b->,c->c'); f.simplify_injective('xy')
         (WordMorphism: a->x, b->, c->y, WordMorphism: x->a, y->c)
     """
-    assert(all(x in self._domain.alphabet() for x in self._codomain.alphabet()))
-
+    assert(self.is_endomorphism())
     f, g = _simplify_injective_once(self, alphabet)
     k = f * g
-    while True:
+    for i in count(start=1):
         try:
             f_new, g_new = _simplify_injective_once(k, alphabet)
-            k, f, g = f_new * g_new, f_new * f, g * g_new # TODO
+            k, f, g = f_new * g_new, f_new * f, g * g_new
         except:
-            return k, f, g
+            return k, f, g, i
 
 def unbounded_letters(self):
     """
@@ -197,12 +198,13 @@ def unbounded_letters(self):
         sage: sorted(WordMorphism('a->b,b->c,c->a').unbounded_letters())
         []
     """
-    assert(all(x in self._domain.alphabet() for x in self._codomain.alphabet()))
+    assert(self.is_endomorphism())
 
     bounded = set()
     unbounded = dict(self._morph)
     undecided = dict()
 
+    # Need a letter not in the alphabet.
     terminal = '#'
     while terminal in self._codomain.alphabet():
         terminal += '#'
@@ -279,6 +281,7 @@ def is_pushy(self):
         sage: WordMorphism('0->0123,1->2,2->1,3->123').is_pushy()
         True
     """
+    assert(self.is_endomorphism())
     try:
         injective_self, _, _ = self.simplify_injective()
     except ValueError:
@@ -300,3 +303,37 @@ def is_pushy(self):
             if any(cycle):
                 return True
     return False
+
+def iter_inf_factors_with_growing_letter(self):
+    """
+    """
+    assert(self.is_endomorphism())
+    try:
+        g, _, k, _ = self.simplify_injective()
+    except ValueError:
+        g, k = self, self.domain().identity_morphism()
+    unbounded = g.unbounded_letters()
+    for equivalence_class in g.periodic_points():
+        q = len(equivalence_class)
+        gq = g**q
+        a = equivalence_class[0][:1]
+        # Check if ((g^q)^Inf)(a) is a periodic infinite word.
+        periodic_point = a
+        letter_cnts = Counter(periodic_point)
+        for _ in g.domain().alphabet():
+            previous_length = periodic_point.length()
+            periodic_point = gq(periodic_point)
+            letter_cnts.update(periodic_point[previous_length:])
+            if any(letter_cnts[letter] >= 2 for letter in unbounded):
+                break
+        else: # nobreak
+            continue
+        if letter_cnts[a[0]] < 2:
+            continue
+        v = periodic_point[:periodic_point.find(a, start=1)]
+        vq = gq(v)
+        m = 0
+        while vq[m*v.length():(m+1)*v.length()] == v:
+            m += 1
+        if m >= 2 and m*v.length() == vq.length():
+            yield k(v).primitive()
