@@ -28,7 +28,7 @@ def _test(logger=None):
             if rndom:
                 random.seed(seed)
                 for i in range(cnt):
-                    print(f'\r{i}                    ', end='')
+                    print(f'\r{i}' + (' ' * 50), end='')
                     h = WordMorphism(create_random_morphism(a1, a2, a3, i1, i2, i3))
                     if debug: print(f'\n{h}')
                     f(h, debug, logger, **kwargs)
@@ -126,9 +126,44 @@ def tmp2(h, debug, logger):
     lst = list(gen)
     if not lst:
         return
-    print(h)
+    print(f'\n{h}')
     for x in lst:
         print(x)
+
+@_test([0])
+def tmp3(h, debug, logger):
+    h._codomain = h._domain
+    gen = h.iter_inf_factors_without_growing_letters()
+    lst = list(gen)
+    if not lst:
+        return
+    logger[0] += 1
+    print(f'\n{h}')
+    for x in lst:
+        print(x)
+
+@_test([0, 0])
+def tmp4(h, debug, logger):
+    h._codomain = h._domain
+    B = h.is_pushy()
+    logger[0] += int(B)
+    U = h.is_unboundedly_rep()
+    logger[1] += int(U)
+    if B and U:
+        print(f'\n{h}')
+        print(list(h.iter_inf_factors_without_growing_letters()))
+        print(list(h.iter_inf_factors_with_growing_letter()))
+
+@_test()
+def tmp5(h, debug, logger):
+    h._codomain = h._domain
+    x = list(h.iter_inf_factors_without_growing_letters())
+    y = list(h.iter_inf_factors_without_growing_letters_OLD())
+    if x != y:
+        print(f'\n{h}')
+        print(x)
+        print(y)
+        assert(False)
 
 # ------------------------------------------------------------------------------
 # https://goo.gl/kkF5SY

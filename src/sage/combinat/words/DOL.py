@@ -1,7 +1,10 @@
 from itertools import islice, count
-from sage.combinat.words.words import FiniteWords
-from sage.combinat.words.morphism import get_cycles, PeriodicPointIterator
 from collections import Counter
+
+from sage.rings.all import IntegerRing
+from sage.combinat.words.words import FiniteWords
+from sage.combinat.words.morphism import get_cycles
+
 
 def is_injective(self):
     """
@@ -272,39 +275,124 @@ def _functional_graph_cycle_iter(graph):
             visited.add(v)
             u = v
 
-def is_pushy(self):
+def iter_inf_factors_without_growing_letters(self, conjugates=True):
     """
+    """
+    def impl(g, unbounded, reversed):
+        if reversed: # <--
+            g_saved = g
+            g = g.reversal()
+        U = dict()
+        for x in unbounded:
+            hx = g.image(x)
+            for i, y in enumerate(hx):
+                if y in unbounded:
+                    break
+            U[x] = y, hx[:i]
+        for cycle in get_cycles(lambda x: U[x][0], domain=unbounded):
+            if all(not U[x][1] for x in cycle):
+                continue
+            u = g.domain()()
+            for x in cycle:
+                u = g(u)
+                u = u + U[x][1]
+            if reversed: # <--
+                g = g_saved
+                u = u.reversal()
+            history = dict({u : 0})
+            for i in count(1):
+                u = g(u)
+                if u in history:
+                    s = IntegerRing()(history[u])
+                    t = IntegerRing()(i - history[u])
+                    break
+                history[u] = i
+            q = len(cycle)
+            l0 = (s / q).ceil() * q
+            l1 = l0 + (t.lcm(q) / q)
+            gq = g ** q
+            uql = gq(u, l0)
+            res = g.domain()()
+            for _ in range(l0+1, l1+1):
+                uql = gq(uql)
+                res += uql
+            yield res.primitive()
 
-    EXAMPLES::
-        sage: WordMorphism('0->012,1->2,2->1').is_pushy()
-        True
-        sage: WordMorphism('0->0123,1->2,2->1,3->123').is_pushy()
-        True
-    """
     assert(self.is_endomorphism())
     try:
-        injective_self, _, _ = self.simplify_injective()
+        g, _, k, _ = self.simplify_injective()
     except ValueError:
-        injective_self = self
-    unbounded = injective_self.unbounded_letters()
-    UL, UR = dict(), dict()
-    for u in unbounded:
-        hu = self._morph[u]
-        for i, v in enumerate(hu):
-            if v in unbounded:
-                break
-        UL[u] = v, hu[:i]
-        for i, v in enumerate(reversed(hu)):
-            if v in unbounded:
-                break
-        UR[u] = v, hu[hu.length()-i:]
-    for U in UL, UR:
-        for cycle in _functional_graph_cycle_iter(U):
-            if any(cycle):
-                return True
-    return False
+        g, k = self, self.domain().identity_morphism()
+    unbounded = g.unbounded_letters()
 
-def iter_inf_factors_with_growing_letter(self):
+    for x in impl(g, unbounded, False): # UL.
+        yield k(x).primitive()
+    for x in impl(g, unbounded, True): # UR.
+        yield k(x).primitive()
+
+def iter_inf_factors_without_growing_letters_OLD(self, conjugates=True):
+    """
+    """
+    def to_period(u, q, g):
+        history = dict({u : 0})
+        for i in count(1):
+            u = g(u)
+            if u in history:
+                s = IntegerRing()(history[u])
+                t = IntegerRing()(i - history[u])
+                break
+            history[u] = i
+        l0 = (s / q).ceil() * q
+        l1 = l0 + (t.lcm(q) / q)
+        gq = g ** q
+        uql = gq(u, l0)
+        res = g.domain()()
+        for _ in range(l0+1, l1+1):
+            uql = gq(uql)
+            res += uql
+        return res.primitive()
+
+    assert(self.is_endomorphism())
+    try:
+        g, _, k, _ = self.simplify_injective()
+    except ValueError:
+        g, k = self, self.domain().identity_morphism()
+    unbounded = g.unbounded_letters()
+
+    # Construct UL and UR.
+    UL, UR = dict(), dict()
+    for x in unbounded:
+        hx = g.image(x)
+        for i, y in enumerate(hx):
+            if y in unbounded:
+                break
+        UL[x] = y, hx[:i]
+        for i, y in enumerate(reversed(hx)):
+            if y in unbounded:
+                break
+        UR[x] = y, hx[hx.length()-i:]
+
+    # Find inf. factors in UL.
+    for cycle in get_cycles(lambda x: UL[x][0], domain=unbounded):
+        if all(not UL[x][1] for x in cycle):
+            continue
+        u = g.domain()()
+        for x in cycle:
+            u = g(u)
+            u = u + UL[x][1]
+        yield k(to_period(u, len(cycle), g)).primitive()
+
+    # Find inf. factors in UR.
+    for cycle in get_cycles(lambda x: UR[x][0], domain=unbounded):
+        if all(not UR[x][1] for x in cycle):
+            continue
+        u = g.domain()()
+        for x in cycle:
+            u = g(u)
+            u = UR[x][1] + u
+        yield k(to_period(u, len(cycle), g)).primitive()
+
+def iter_inf_factors_with_growing_letter(self, conjugates=True):
     """
     """
     assert(self.is_endomorphism())
@@ -313,6 +401,7 @@ def iter_inf_factors_with_growing_letter(self):
     except ValueError:
         g, k = self, self.domain().identity_morphism()
     unbounded = g.unbounded_letters()
+
     for equivalence_class in g.periodic_points():
         q = len(equivalence_class)
         gq = g**q
@@ -337,3 +426,26 @@ def iter_inf_factors_with_growing_letter(self):
             m += 1
         if m >= 2 and m*v.length() == vq.length():
             yield k(v).primitive()
+
+def iter_inf_factors(self, conjugates=True):
+    for x in self.iter_inf_factors_without_growing_letters(conjugates):
+        yield x
+    for x in self.iter_inf_factors_with_growing_letter(conjugates):
+        yield x
+
+def is_pushy(self):
+    try:
+        next(self.iter_inf_factors_without_growing_letters(False))
+    except StopIteration:
+        return False
+    return True
+
+def is_unboundedly_rep(self):
+    try:
+        next(self.iter_inf_factors_with_growing_letter(False))
+    except StopIteration:
+        return False
+    return True
+
+def is_repetitive(self):
+    return self.is_pushy() or self.is_unboundedly_repetitive()

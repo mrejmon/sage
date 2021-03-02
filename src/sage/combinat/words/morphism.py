@@ -3166,5 +3166,13 @@ class WordMorphism(SageObject):
         return M._column_ambient_module().change_ring(QQ).subspace(basis)
 
     # Probably temporary.
-    from .DOL import is_injective, simplify_injective, unbounded_letters, is_pushy, iter_inf_factors_with_growing_letter # * doesn't work here.
-    from .DOL import _simplify_injective_once, _functional_graph_cycle_iter
+    from .DOL import (
+        is_injective, simplify_injective, unbounded_letters,
+        iter_inf_factors,
+        is_pushy,
+        is_unboundedly_rep,
+        is_repetitive,
+        iter_inf_factors_without_growing_letters,
+        iter_inf_factors_with_growing_letter
+    ) # * doesn't work here.
+    from .DOL import _simplify_injective_once, _functional_graph_cycle_iter, iter_inf_factors_without_growing_letters_OLD
