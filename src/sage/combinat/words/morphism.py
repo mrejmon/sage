@@ -3165,17 +3165,22 @@ class WordMorphism(SageObject):
         return M._column_ambient_module().change_ring(QQ).subspace(basis)
 
     # Probably temporary.
-    from .DOL import (
+    from .DOL import ( # * doesn't work here.
         infinite_factors,
         is_repetitive,
         is_pushy,
         is_unboundedly_rep,
-        simplify,
+        simplify_attempt,
         simplify_injective,
         infinite_factors_bounded,
         infinite_factors_unbounded,
         is_injective
-    ) # * doesn't work here.
-    from .DOL import unbounded_letters, periodic_points_fixed
-    growing_letters = unbounded_letters
+    )
+    from .DOL_other import (
+        is_endomorphism_alternative,
+        periodic_points_fixed,
+        growing_letters_alternative
+    )
+    is_endomorphism = is_endomorphism_alternative
     periodic_points = periodic_points_fixed
+    growing_letters = growing_letters_alternative

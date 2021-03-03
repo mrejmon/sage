@@ -74,19 +74,26 @@ def _necessary_condition_for_elementary(self):
             return True
     return False
 
-@_test()
-def test_simplify_injective(h, debug, logger):
+@_test([0])
+def test_simplify_injective(f, debug, logger):
     try:
-        k, f, g = h.simplify_injective(string.ascii_uppercase)
+        g, h, k, i = f.simplify_injective(string.ascii_uppercase)
     except ValueError:
         if debug: print('failed to simplify')
-        assert(h.is_injective())
-    if debug: print(f'G: {g}\nF: {f}\nK: {k}')
-    assert(len(k._domain.alphabet()) < len(h._domain.alphabet()))
-    assert(k.is_injective())
-    h2 = g * f
-    if debug: print(f'H?: {h2}')
-    assert(h == h2)
+        assert(f.is_injective())
+        return
+    logger[0] += 1
+    if debug: print(f'g: {g}\nh: {h}\nk: {k}\ni: {i}')
+    assert(len(g._domain.alphabet()) < len(f._domain.alphabet()))
+    assert(g.is_injective())
+    gi = g ** i
+    gi2 = h * k
+    if debug: print(f'gi: {gi}\ngi?: {gi2}')
+    assert(gi == gi2)
+    fi = f ** i
+    fi2 = k * h
+    if debug: print(f'fi: {fi}\nfi?: {fi2}')
+    assert(fi == fi2)
 
 @_test()
 def find_counter_examples(h, debug, logger):
@@ -102,12 +109,12 @@ def find_counter_examples(h, debug, logger):
 @_test([0])
 def tmp(h, debug, logger):
     try:
-        f, g = h._simplify_injective_once()
+        f, g = h.simplify_attempt()
         k = f * g
     except ValueError:
         return
     try:
-        f2, g2 = k._simplify_injective_once()
+        f2, g2 = k.simplify_attempt()
         k2 = f2 * g2
     except ValueError:
         return
@@ -164,6 +171,18 @@ def tmp5(h, debug, logger):
         print(x)
         print(y)
         assert(False)
+
+@_test()
+def tmp6(h, debug, logger):
+    if not h.is_injective():
+        x = h.simplify()
+        y = h.simplify_OLD()
+        if not x == y:
+            print(x[0] * x[1])
+            print(x)
+            print(y)
+            print(y[0] * y[1])
+            assert(False)
 
 # ------------------------------------------------------------------------------
 # https://goo.gl/kkF5SY

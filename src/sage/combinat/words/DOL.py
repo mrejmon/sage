@@ -1,7 +1,7 @@
-from itertools import islice, count
+from itertools import count
 from collections import Counter
 
-from sage.rings.all import IntegerRing
+from sage.rings.all import ZZ
 from sage.combinat.words.words import FiniteWords
 from sage.combinat.words.morphism import get_cycles
 
@@ -33,118 +33,169 @@ def is_unboundedly_rep(self):
     """
     return bool(self.infinite_factors_unbounded())
 
-def simplify(self, alphabet=None):
-    """
-    TODO
-    """
-    # Remove erasing letters.
-    g_wip = dict(self._morph)
-    for letter, image in self._morph.items():
-        if not image:
-            del g_wip[letter]
+def simplify_attempt(self, Z=None):
+    r"""
+    Let ``self`` be a morphism `f: X^* \rightarrow Y^*`. Attempt to return
+    morphisms `h: X^* \rightarrow Z^*` and `k: Z^* \rightarrow Y^*`, such that
+    `f = k \cdot h` and `\#Z < \#X` and if `X = Y`, then morphism
+    `g: Z^* \rightarrow Z^* = h \cdot k` is a simplification of `f`
+    (with respect to (`h`, `k`)). Simplification preserves some properties of
+    the original morphism (e.g. infinite factors).
 
-    # Simplify (find morphism g).
-    to_do = set(g_wip)
-    to_remove = []
-    while to_do:
-        # min() and remove() instead of pop() to have deterministic output.
-        letter1 = min(to_do)
-        to_do.remove(letter1)
-        image1 = g_wip[letter1]
-        for letter2, image2 in g_wip.items():
-            if letter1 == letter2:
-                continue
-            if image1.length() == image2.length():
+    This function always succeeds if ``self`` is not injective, but can fail
+    (raise ``ValueError``) if ``self`` is injective, even if self is simplifiable.
+
+    INPUT:
+
+    - ``Z`` -- iterable used (or its subset) as a domain for the simplification,
+      default is ``self.domain().alphabet()``
+
+    EXAMPLES:
+
+    Example of a simplifiable morphism::
+
+        sage: f = WordMorphism('a->bca,b->bcaa,c->bcaa)
+        sage: h, k = f.simplify_attempt('xy')
+        sage: h
+        WordMorphism: a->xy, b->xyy, c->xyyy
+        sage: k
+        WordMorphism: x->bc, y->a
+        sage: g = h * k; g
+        WordMorphism: x->xyyxyyy, y->xy
+        sage: k * h == f
+        True
+
+    Example of a non-simplifiable morphism::
+
+        sage: WordMorphism('a->aa').simplify_attempt()
+        Traceback (most recent call last):
+        ...
+        ValueError: failed to simplify a->aa
+
+    Example of a simplifiable morphism that the function fails on::
+
+        sage: f = WordMorphism('a->abcc,b->abcd,c->abdc,d->abdd')
+        sage: f.simplify_attempt('xyz')
+        Traceback (most recent call last):
+        ...
+        ValueError: failed to simplify a->abcc, b->abcd, c->abdc, d->abdd
+        sage: h = WordMorphism('a->xyy,b->xyz,c->xzy,d->xzz')
+        sage: k = WordMorphism('x->ab,y->c,z->d')
+        sage: k * h == f
+        True
+        sage: g = h * k; g
+        WordMorphism: x->xyyxyz, y->xzy, z->xzz
+
+    .. NOTE::
+
+        Time complexity is `O(L^2)`, where `L` is the sum of the lengths of all images of ``self``.
+    """
+    X = self.domain().alphabet()
+    Y = self.domain().alphabet()
+    if not Z:
+        Z = X
+    if len(Z) < len(X) - 1:
+        raise ValueError(f'alphabet should have length at least {len(X) - 1}, is {len(Z)}')
+
+    f = self._morph
+    if len(Y) < len(X):
+        k = {letter1 : [letter2] for letter1, letter2 in zip(Z, Y)}
+    else:
+        k_wip = dict(f)
+        for letter, image in f.items():
+            if not image:
+                del k_wip[letter]
+
+        to_do = set(f)
+        to_remove = []
+        while to_do:
+            # min() and remove() instead of pop() to have deterministic output.
+            letter1 = min(to_do)
+            to_do.remove(letter1)
+            image1 = k_wip[letter1]
+            for letter2, image2 in k_wip.items():
+                if letter1 == letter2:
+                    continue
                 if image1 == image2:
                     to_remove.append(letter2)
                     to_do.discard(letter2)
-            elif image1.length() < image2.length():
-                if image1.is_prefix(image2):
-                    g_wip[letter2] = image2[image1.length():]
+                elif image1.is_prefix(image2):
+                    k_wip[letter2] = image2[image1.length():]
                     to_do.add(letter2)
                 elif image1.is_suffix(image2):
-                    g_wip[letter2] = image2[:-image1.length()]
+                    k_wip[letter2] = image2[:-image1.length()]
                     to_do.add(letter2)
-            else:
-                if image2.is_prefix(image1):
-                    g_wip[letter1] = image1[image2.length():]
+                elif image2.is_prefix(image1):
+                    k_wip[letter1] = image1[image2.length():]
                     to_do.add(letter1)
                     break
                 elif image2.is_suffix(image1):
-                    g_wip[letter1] = image1[:-image2.length()]
+                    k_wip[letter1] = image1[:-image2.length()]
                     to_do.add(letter1)
                     break
-        for letter in to_remove:
-            del g_wip[letter]
-        to_remove = []
+            for letter in to_remove:
+                del k_wip[letter]
+            to_remove = []
 
-    if len(g_wip) == len(self._morph):
-        raise ValueError(f'failed to simplify {self}')
+        if len(k_wip) == len(f):
+            raise ValueError(f'failed to simplify {self}')
 
-    Z = alphabet[:len(g_wip)] if alphabet else self._domain.alphabet()[:len(g_wip)]
-    g = {letter : image for letter, image in zip(Z, g_wip.values())}
+        k = {letter : image for letter, image in zip(Z, k_wip.values())}
 
-    # Find f by using g on self "in reverse".
-    f = {}
-    for letter1, image1 in self._morph.items():
+    # Find h by using k on f "in reverse".
+    h = {}
+    for letter1, image1 in f.items():
         image3 = []
-        while True:
-            for letter2, image2 in g.items():
+        while image1:
+            for letter2, image2 in k.items():
                 if image2.is_prefix(image1):
                     image1 = image1[image2.length():]
                     image3.append(letter2)
                     break
-            if not image1:
-                break
-        f[letter1] = image3
+        h[letter1] = image3
 
-    FW_Z = FiniteWords(Z)
-    f = type(self)(f, domain=self._domain, codomain=FW_Z)
-    g = type(self)(g, domain=FW_Z, codomain=self._codomain)
-    return f, g
+    Z_star = FiniteWords(Z[:len(k)])
+    h = type(self)(h, domain=self.domain(), codomain=Z_star)
+    k = type(self)(k, domain=Z_star, codomain=self.codomain())
+    return h, k
 
-def simplify_injective(self, alphabet=None):
-    """
-    TODO
 
-    If self is not injective, return a triplet (k, f, g), where k is a injective
-    simplification of self with respect to (f, g).
+def simplify_injective(self, Z=None):
+    r"""
+    Let ``self`` be a non-injective morphism `f: X^* \rightarrow X^*`. Return a
+    quadruplet `(g, h, k, i)`, where `g: Z^* \rightarrow Z^*`,
+    `h: X^* \rightarrow Z^*` and `k: Z^* \rightarrow X^*` are morphisms
+    and `i` is an integer, such that `g` is an injective simplification of `f`
+    with respect to `(h, k, i)`, that is `g` is injective and `\#Z < \#Y` and
+    `g^i = h \cdot k` and `f^i = k \cdot h`.
 
-    Let h be a morphism X^*->X^*. If h is not injective, then there exist morphisms
-    f: X^*->Z^* and g: Z^*->X^* such that h = g o f, k = f o g is injective and #Z < #X.
-    The morphism k is then called the injective simplification of h with respect to (f, g).
+    INPUT:
 
-    # RE 83
-    # if self is injective
-    # mention that f has to be ^k
-    # rename h, f, g, k to f, h, k, g
+    - ``Z`` -- iterable used (or its subset) as a domain for the simplification,
+      default is ``self.domain().alphabet()``
 
     EXAMPLES::
 
-        sage: a = WordMorphism('a->bca,b->bcaa,c->bcaaa'); a.simplify_injective('xy')
-        (WordMorphism: a->xy, b->xyy, c->xyyy, WordMorphism: x->bc, y->a)
-        sage: b = WordMorphism('a->abc,b->bc,c->a'); b.simplify_injective('xy')
-        (WordMorphism: a->xy, b->y, c->x, WordMorphism: x->a, y->bc)
-        sage: c = WordMorphism('a->aca,b->badc,c->acab,d->adc'); c.simplify_injective('xyz')
-        (WordMorphism: a->x, b->zy, c->xz, d->y, WordMorphism: x->aca, y->adc, z->b)
-        sage: d = WordMorphism('a->1,b->011,c->01110,d->1110'); d.simplify_injective('xyz')
-        (WordMorphism: a->y, b->xyy, c->xyyyx, d->yyyx, WordMorphism: x->0, y->1) # nope
-        sage: e = WordMorphism('a->abc,b->bc,c->a,f->'); e.simplify_injective('xy')
-        (WordMorphism: a->xy, b->y, c->x, f->, WordMorphism: x->a, y->bc)
-        sage: f = WordMorphism('a->a,b->,c->c'); f.simplify_injective('xy')
-        (WordMorphism: a->x, b->, c->y, WordMorphism: x->a, y->c)
-
-        WordMorphism('a->abc,b->a,c->bc')
+        sage: f = WordMorphism('a->abc,b->a,c->bc')
+        sage: g, h, k, i = f.simplify_injective('xy'); g, h, k, i
+        (WordMorphism: x->xx, WordMorphism: a->xx, b->x, c->x, WordMorphism: x->abc, 2)
+        sage: g.is_injective()
+        True
+        sage: g ** i = h * k
+        True
+        sage: f ** i = k * h
+        True
     """
-    assert(self.is_endomorphism())
-    f, g = simplify(self, alphabet)
-    k = f * g
+    if not self.is_endomorphism():
+        raise TypeError(f'self ({self}) is not an endomorphism')
+    h, k = simplify_attempt(self, Z)
+    g = h * k
     for i in count(start=1):
         try:
-            f_new, g_new = simplify(k, alphabet)
-            k, f, g = f_new * g_new, f_new * f, g * g_new
+            h_new, k_new = simplify_attempt(g, Z)
+            g, h, k = h_new * k_new, h_new * h, k * k_new
         except:
-            return k, f, g, i
+            return g, h, k, i
 
 def infinite_factors_bounded(self):
     """
@@ -175,8 +226,8 @@ def infinite_factors_bounded(self):
             for i in count(1):
                 u = g(u)
                 if u in history:
-                    s = IntegerRing()(history[u])
-                    t = IntegerRing()(i - history[u])
+                    s = ZZ(history[u])
+                    t = ZZ(i - history[u])
                     break
                 history[u] = i
             q = len(cycle)
@@ -192,7 +243,8 @@ def infinite_factors_bounded(self):
             for x in res.conjugates_iterator():
                 result.add(x)
 
-    assert(self.is_endomorphism())
+    if not self.is_endomorphism():
+        raise TypeError(f'self ({self}) is not an endomorphism')
     try:
         g, _, k, _ = self.simplify_injective()
     except ValueError:
@@ -210,7 +262,8 @@ def infinite_factors_unbounded(self):
     """
     TODO
     """
-    assert(self.is_endomorphism())
+    if not self.is_endomorphism():
+        raise TypeError(f'self ({self}) is not an endomorphism')
     try:
         g, _, k, _ = self.simplify_injective()
     except ValueError:
@@ -251,34 +304,6 @@ def infinite_factors_unbounded(self):
 def is_injective(self):
     """
     TODO
-
-    EXAMPLES::
-
-        sage: WordMorphism('a->0,b->10,c->110,d->111').is_injective()
-        True
-        sage: WordMorphism('a->0,b->010,c->01,d->10').is_injective()
-        False
-
-    TESTS::
-
-        sage: WordMorphism('a->10,b->00,c->11,d->110').is_injective()
-        True
-        sage: WordMorphism('a->0,b->0,c->1,d->1').is_injective()
-        False
-        sage: WordMorphism('a->1,b->011,c->01110,d->1110,e->10011').is_injective()
-        False
-        sage: WordMorphism('').is_injective()
-        True
-        sage: WordMorphism('a->').is_injective()
-        False
-        sage: WordMorphism('a->b').is_injective()
-        True
-        sage: WordMorphism('a->,b->').is_injective()
-        False
-        sage: WordMorphism('a->a,b->').is_injective()
-        False
-        sage: WordMorphism('a->,b->b').is_injective()
-        False
     """
     def check(u, v):
         if u.is_prefix(v):
@@ -307,81 +332,3 @@ def is_injective(self):
             check(u, v)
             check(v, u)
     return True
-
-# ================================================
-# OTHER
-# ================================================
-
-def unbounded_letters(self):
-    assert(self.is_endomorphism())
-
-    bounded = set()
-    unbounded = dict(self._morph)
-    undecided = dict()
-
-    # Need a letter not in the alphabet.
-    terminal = '#'
-    while terminal in self.codomain().alphabet():
-        terminal += '#'
-
-    # Split letters into bounded, unbounded and undecided.
-    while True:
-        for letter1, image1 in unbounded.items():
-            if not image1:
-                bounded.add(letter1)
-                del unbounded[letter1]
-                for letter2, image2 in unbounded.items():
-                    unbounded[letter2] = [x for x in image2 if x != letter1]
-                break
-            elif all(x == terminal for x in image1) or (len(image1) == 1 and image1[0] == letter1):
-                bounded.add(letter1)
-                del unbounded[letter1]
-                for letter2, image2 in unbounded.items():
-                    unbounded[letter2] = [x if x != letter1 else terminal for x in image2]
-                break
-            elif len(image1) == 1:
-                undecided[letter1] = image1
-                del unbounded[letter1]
-                for letter2, image2 in unbounded.items():
-                    unbounded[letter2] = [x if x != letter1 else image1[0] for x in image2]
-                break
-        else: # no break
-            break
-
-    # Decide undecided letters.
-    while True:
-        for letter, image in undecided.items():
-            if image[0] in bounded:
-                bounded.add(letter)
-                del undecided[letter]
-                break
-            elif image[0] in unbounded:
-                unbounded[letter] = image
-                del undecided[letter]
-                break
-        if not undecided:
-            break
-
-    return sorted(unbounded, key=self.domain().sortkey_letters)
-
-def periodic_points_fixed(self):
-    from sage.misc.callable_dict import CallableDict
-    from sage.combinat.words.morphism import PeriodicPointIterator
-
-    assert self.is_endomorphism(), "f should be an endomorphism"
-
-    if self.is_erasing():
-        raise NotImplementedError("f should be non erasing")
-
-    A = self.domain().alphabet()
-    d = dict((letter,self(letter)[0]) for letter in A)
-    G = set(self.growing_letters()) # <--
-
-    res = []
-    parent = self.codomain().shift()
-    for cycle in get_cycles(CallableDict(d),A):
-        if cycle[0] in G: # <--
-            P = PeriodicPointIterator(self, cycle)
-            res.append([parent(P._cache[i]) for i in range(len(cycle))])
-
-    return res
