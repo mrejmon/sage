@@ -3166,15 +3166,15 @@ class WordMorphism(SageObject):
 
     # Probably temporary.
     from .DOL import ( # * doesn't work here.
-        infinite_factors,
+        is_injective,
+        infinite_repetitions,
+        infinite_repetitions_nongrowing,
+        infinite_repetitions_growing,
         is_repetitive,
         is_pushy,
-        is_unboundedly_rep,
-        simplify_attempt,
+        is_unboundedly_repetitive,
+        simplify,
         simplify_injective,
-        infinite_factors_bounded,
-        infinite_factors_unbounded,
-        is_injective
     )
     from .DOL_other import (
         is_endomorphism_alternative,

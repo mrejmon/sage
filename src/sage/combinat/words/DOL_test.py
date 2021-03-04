@@ -129,13 +129,13 @@ def tmp(h, debug, logger):
 @_test()
 def tmp2(h, debug, logger):
     h._codomain = h._domain
-    gen = h.iter_inf_factors_with_growing_letter()
-    lst = list(gen)
-    if not lst:
+    nongrowing = h.infinite_repetitions_nongrowing()
+    growing = h.infinite_repetitions_growing()
+    if not (nongrowing and growing):
         return
     print(f'\n{h}')
-    for x in lst:
-        print(x)
+    print(f'nongrowing:\n{nongrowing}')
+    print(f'growing:\n{growing}')
 
 @_test([0])
 def tmp3(h, debug, logger):
