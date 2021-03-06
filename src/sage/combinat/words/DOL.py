@@ -52,18 +52,18 @@ def is_injective(self):
 
 def infinite_repetitions(self):
     r"""
-    Return a sorted list of all infinite repetitions of the D0L system made from
-    this morphism and an arbitrary axiom, from which all letters are accessible.
+    Return the set of all infinite repetitions of the D0L system made from this
+    morphism and an arbitrary axiom, from which all letters are accessible.
 
     Requires this morphism to be an endomorphism.
 
-    D0L system is a triplet `(A, \varphi, w)`, where `A` is an alphabet,
+    A D0L system is a triplet `(A, \varphi, w)`, where `A` is an alphabet,
     `\varphi` a morphism on `A^*` and `w` a non-empty word (called axiom).
     The language of a D0L system is the set `\{\varphi^k(w) | k \in \NN\}`.
 
-    Infinite repetition (aka infinite periodic factor) of a D0L system is a
-    non-empty word `w` such that `w^k` is a factor of the language of the system
-    for all positive integers `k`.
+    An infinite repetition (aka an infinite periodic factor) of a D0L system is
+    a non-empty word `w` such that `w^k` is a factor of a word of the language
+    of the system for all positive integers `k`.
 
     ALGORITHM:
 
@@ -72,7 +72,8 @@ def infinite_repetitions(self):
     EXAMPLES::
 
         sage: morph = WordMorphism('a->aba,b->aba,c->cd,d->e,e->d')
-        sage: inf_reps = morph.infinite_repetitions(); inf_reps
+        sage: inf_reps = morph.infinite_repetitions()
+        sage: sorted(inf_reps)
         [word: aab, word: aba, word: baa, word: de, word: ed]
 
     Incomplete check that these words are indeed infinite repetitions::
@@ -85,17 +86,13 @@ def infinite_repetitions(self):
         sage: all(x^3 in SL for x in inf_reps)
         True
     """
-    bounded = self.infinite_repetitions_nongrowing()
-    unbounded = self.infinite_repetitions_growing()
+    return self.infinite_repetitions_nogrowing() | self.infinite_repetitions_growing()
 
-    sortkey = self.domain().sortkey_letters
-    return sorted(bounded + unbounded, key=lambda x: [sortkey(y) for y in x])
-
-def infinite_repetitions_nongrowing(self):
+def infinite_repetitions_nogrowing(self):
     """
-    Return a sorted list of all infinite repetitions, which contain only
-    non-growing letters, of the D0L system made from this morphism and an
-    arbitrary axiom, from which all letters are accessible.
+    Return the set of all infinite repetitions, which contain no growing
+    letters, of the D0L system made from this morphism and an arbitrary axiom,
+    from which all letters are accessible.
 
     Requires this morphism to be an endomorphism.
 
@@ -103,9 +100,12 @@ def infinite_repetitions_nongrowing(self):
 
     EXAMPLES::
 
-        sage: WordMorphism('a->aba,b->aba,c->cd,d->e,e->d').infinite_repetitions_nongrowing()
+        sage: morph = WordMorphism('a->aba,b->aba,c->cd,d->e,e->d')
+        sage: sorted(morph.infinite_repetitions_nogrowing())
         [word: de, word: ed]
-        sage: WordMorphism('c->d,d->c,e->fc,f->ed').infinite_repetitions_nongrowing()
+
+        sage: morph = WordMorphism('c->d,d->c,e->fc,f->ed')
+        sage: sorted(morph.infinite_repetitions_nogrowing())
         [word: c, word: d]
     """
     def impl(reversed):
@@ -164,15 +164,13 @@ def infinite_repetitions_nongrowing(self):
     result = set()
     impl(False) # UL.
     impl(True) # UR.
-
-    sortkey = self.domain().sortkey_letters
-    return sorted(result, key=lambda x: [sortkey(y) for y in x])
+    return result
 
 def infinite_repetitions_growing(self):
     """
-    Return a sorted list of all infinite repetitions, which contain at least
-    one growing letter, of the D0L system made from this morphism and an
-    arbitrary axiom, from which all letters are accessible.
+    Return the set of all infinite repetitions, which contain at least one
+    growing letter, of the D0L system made from this morphism and an arbitrary
+    axiom, from which all letters are accessible.
 
     Requires this morphism to be an endomorphism.
 
@@ -180,11 +178,16 @@ def infinite_repetitions_growing(self):
 
     EXAMPLES::
 
-        sage: WordMorphism('a->aba,b->aba,c->cd,d->e,e->d').infinite_repetitions_growing()
+        sage: morph = WordMorphism('a->aba,b->aba,c->cd,d->e,e->d')
+        sage: sorted(morph.infinite_repetitions_growing())
         [word: aab, word: aba, word: baa]
-        sage: WordMorphism('a->bcb,b->ada,c->d,d->c').infinite_repetitions_growing()
+
+        sage: morph = WordMorphism('a->bcb,b->ada,c->d,d->c')
+        sage: sorted(morph.infinite_repetitions_growing())
         [word: ad, word: bc, word: cb, word: da]
-        sage: WordMorphism('b->c,c->bcb').infinite_repetitions_growing()
+
+        sage: morph = WordMorphism('b->c,c->bcb')
+        sage: sorted(morph.infinite_repetitions_growing())
         [word: bc, word: cb]
     """
     if not self.is_endomorphism():
@@ -222,9 +225,7 @@ def infinite_repetitions_growing(self):
                 res = k(v).primitive()
                 for x in res.conjugates_iterator():
                     result.add(x)
-
-    sortkey = self.domain().sortkey_letters
-    return sorted(result, key=lambda x: [sortkey(y) for y in x])
+    return result
 
 def is_repetitive(self):
     """
@@ -233,10 +234,12 @@ def is_repetitive(self):
 
     Requires this morphism to be an endomorphism.
 
-    D0L system is repetitive iff for all positive integers `k` there is a
-    non-empty word `w` such that `w^k` is a factor of the language of the
-    system. It turns out that this is equivalent to having at least one infinite
-    repetition (aka strong repetitiveness).
+    A D0L system is repetitive iff for all positive integers `k` there is a
+    non-empty word `w` such that `w^k` is a factor of a word of the language of
+    the system. Therefore if a D0L system is not repetitive it must be k-power
+    free for some `k`. It turns out that for D0L systems repetitiveness is
+    equivalent to having at least one infinite repetition (aka strong
+    repetitiveness).
 
     See :meth:`infinite_repetitions`.
 
@@ -256,8 +259,10 @@ def is_pushy(self):
 
     Requires this morphism to be an endomorphism.
 
-    D0L system is pushy iff it has at least one infinite repetition containing
-    only non-growing letters.
+    A D0L system is pushy iff it has an infinite amount of factors (of words
+    of the language of the system) containing no growing letters. It turns out
+    that this is equivalent to having at least one infinite repetition
+    containing no growing letters.
 
     See :meth:`infinite_repetitions` and :meth:`is_growing`.
 
@@ -268,7 +273,7 @@ def is_pushy(self):
         sage: WordMorphism('a->abc,b->,c->bcb').is_pushy()
         True
     """
-    return bool(self.infinite_repetitions_nongrowing())
+    return bool(self.infinite_repetitions_nogrowing())
 
 def is_unboundedly_repetitive(self):
     """
@@ -277,7 +282,7 @@ def is_unboundedly_repetitive(self):
 
     Requires this morphism to be an endomorphism.
 
-    D0L system is unboundedly repetitive iff it has at least one infinite
+    A D0L system is unboundedly repetitive iff it has at least one infinite
     repetition containing at least one growing letter.
 
     See :meth:`infinite_repetitions` and :meth:`is_growing`.
