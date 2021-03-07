@@ -3179,7 +3179,8 @@ class WordMorphism(SageObject):
     from .DOL_other import (
         is_endomorphism_alternative,
         periodic_points_fixed,
-        growing_letters_alternative
+        growing_letters_alternative,
+        is_injective_v2
     )
     is_endomorphism = is_endomorphism_alternative
     periodic_points = periodic_points_fixed

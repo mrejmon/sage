@@ -74,3 +74,73 @@ def growing_letters_alternative(self):
             break
 
     return sorted(unbounded, key=self.domain().sortkey_letters)
+
+def is_injective_v2(self, certificate=False):
+    """
+    Return whether this morphism is injective.
+
+    ALGORITHM:
+
+    Slightly modified version of :wikipedia:`Sardinas–Patterson_algorithm`.
+    Time complexity is `O(L^2)`, where `L` is the sum of lengths of images
+    of this morphism.
+
+    EXAMPLES::
+
+        sage: WordMorphism('a->0,b->10,c->110,d->111').is_injective()
+        True
+        sage: WordMorphism('a->00,b->01,c->012,d->20001').is_injective()
+        False
+
+    One pair of preimages mapped to the same word can be obtained by
+    setting the ``certificate`` parameter to ``True``::
+
+        sage: m = WordMorphism('a->00,b->01,c->012,d->20001')
+        sage: answer, u, v = m.is_injective(certificate=True); answer, u, v
+        (False, word: bd, word: cab)
+        sage: m(u) == m(v)
+        True
+
+    If the morphism is injective, ``None`` is returned instead::
+
+        sage: WordMorphism('a->0,b->10,c->110,d->111').is_injective(True)
+        True, None, None
+    """
+    domain = self.domain()
+    for letter, image in self._morph.items():
+        if not image:
+            return False if not certificate else (False, domain([letter]), domain([letter, letter]))
+
+    todo = []
+    tails = {}
+
+    for letter1, image1 in self._morph.items():
+        for letter2, image2 in self._morph.items():
+            if letter1 == letter2:
+                continue
+            elif image1.is_prefix(image2):
+                tail = image2[image1.length():]
+                if tail not in tails:
+                    todo.append(tail)
+                    tails[tail] = ([letter1], [letter2])
+
+    while todo:
+        tail = todo.pop()
+        for letter, image in self._morph.items():
+            if tail == image:
+                preimage1, preimage2 = tails[tail]
+                return False if not certificate else (False, domain(preimage2), domain(preimage1 + [letter]))
+            elif tail.is_prefix(image):
+                new_tail = image[tail.length():]
+                if new_tail not in tails:
+                    todo.append(new_tail)
+                    preimage1, preimage2 = tails[tail]
+                    tails[new_tail] = (preimage2, preimage1 + [letter])
+            elif image.is_prefix(tail):
+                new_tail = tail[image.length():]
+                if new_tail not in tails:
+                    todo.append(new_tail)
+                    preimage1, preimage2 = tails[tail]
+                    tails[new_tail] = (preimage1 + [letter], preimage2)
+
+    return True if not certificate else (True, None, None)

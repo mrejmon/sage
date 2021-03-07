@@ -19,7 +19,7 @@ def is_injective(self):
 
         sage: WordMorphism('a->0,b->10,c->110,d->111').is_injective()
         True
-        sage: WordMorphism('a->0,b->010,c->01,d->10').is_injective()
+        sage: WordMorphism('a->00,b->01,c->012,d->20001').is_injective()
         False
     """
     def check(u, v):
@@ -71,14 +71,14 @@ def infinite_repetitions(self):
 
     EXAMPLES::
 
-        sage: morph = WordMorphism('a->aba,b->aba,c->cd,d->e,e->d')
-        sage: inf_reps = morph.infinite_repetitions()
+        sage: m = WordMorphism('a->aba,b->aba,c->cd,d->e,e->d')
+        sage: inf_reps = m.infinite_repetitions()
         sage: sorted(inf_reps)
         [word: aab, word: aba, word: baa, word: de, word: ed]
 
     Incomplete check that these words are indeed infinite repetitions::
 
-        sage: SL = morph._language_naive(10, Word('abcde'))
+        sage: SL = m._language_naive(10, Word('abcde'))
         sage: all(x in SL for x in inf_reps)
         True
         sage: all(x^2 in SL for x in inf_reps)
@@ -100,20 +100,16 @@ def infinite_repetitions_nogrowing(self):
 
     EXAMPLES::
 
-        sage: morph = WordMorphism('a->aba,b->aba,c->cd,d->e,e->d')
-        sage: sorted(morph.infinite_repetitions_nogrowing())
+        sage: m = WordMorphism('a->aba,b->aba,c->cd,d->e,e->d')
+        sage: sorted(m.infinite_repetitions_nogrowing())
         [word: de, word: ed]
 
-        sage: morph = WordMorphism('c->d,d->c,e->fc,f->ed')
-        sage: sorted(morph.infinite_repetitions_nogrowing())
+        sage: m = WordMorphism('c->d,d->c,e->fc,f->ed')
+        sage: sorted(m.infinite_repetitions_nogrowing())
         [word: c, word: d]
     """
-    def impl(reversed):
-        nonlocal g
-        if reversed:
-            g_saved = g
-            g = g.reversal()
-        U = dict()
+    def impl():
+        U = {}
         for x in unbounded:
             hx = g.image(x)
             for i, y in enumerate(hx):
@@ -123,15 +119,11 @@ def infinite_repetitions_nogrowing(self):
         for cycle in get_cycles(lambda x: U[x][0], domain=unbounded):
             if all(not U[x][1] for x in cycle):
                 continue
-            for _ in range(len(cycle)):
-                cycle = cycle[1:] + cycle[:1]
+            for cycle in g.domain()(cycle).conjugates_iterator():
                 u = g.domain()()
                 for x in cycle:
                     u = g(u)
                     u = u + U[x][1]
-                if reversed:
-                    g = g_saved
-                    u = u.reversal()
                 history = dict({u : 0})
                 for i in count(1):
                     u = g(u)
@@ -143,15 +135,13 @@ def infinite_repetitions_nogrowing(self):
                 q = len(cycle)
                 l0 = (s / q).ceil() * q
                 l1 = l0 + (t.lcm(q) / q)
-                gq = g ** q
+                gq = g.restrict_domain(bounded) ** q
                 uql = gq(u, l0)
                 res = g.domain()()
                 for _ in range(l0+1, l1+1):
                     uql = gq(uql)
-                    res += uql
-                res = k(res.primitive()).primitive()
-                for x in res.conjugates_iterator():
-                    result.add(x)
+                    res = uql + res
+                yield k(res.primitive()).primitive()
 
     if not self.is_endomorphism():
         raise TypeError(f'self ({self}) is not an endomorphism')
@@ -160,10 +150,15 @@ def infinite_repetitions_nogrowing(self):
     except ValueError:
         g, k = self, self.domain().identity_morphism()
     unbounded = set(g.growing_letters())
+    bounded = set(g.domain().alphabet()) - unbounded
 
     result = set()
-    impl(False) # UL.
-    impl(True) # UR.
+    for x in impl():
+        result.update(x.conjugates_iterator())
+    g, k = g.reversal(), k.reversal()
+    for x in impl():
+        result.update(self.domain()(reversed(x)).conjugates_iterator())
+
     return result
 
 def infinite_repetitions_growing(self):
@@ -178,16 +173,16 @@ def infinite_repetitions_growing(self):
 
     EXAMPLES::
 
-        sage: morph = WordMorphism('a->aba,b->aba,c->cd,d->e,e->d')
-        sage: sorted(morph.infinite_repetitions_growing())
+        sage: m = WordMorphism('a->aba,b->aba,c->cd,d->e,e->d')
+        sage: sorted(m.infinite_repetitions_growing())
         [word: aab, word: aba, word: baa]
 
-        sage: morph = WordMorphism('a->bcb,b->ada,c->d,d->c')
-        sage: sorted(morph.infinite_repetitions_growing())
+        sage: m = WordMorphism('a->bcb,b->ada,c->d,d->c')
+        sage: sorted(m.infinite_repetitions_growing())
         [word: ad, word: bc, word: cb, word: da]
 
-        sage: morph = WordMorphism('b->c,c->bcb')
-        sage: sorted(morph.infinite_repetitions_growing())
+        sage: m = WordMorphism('b->c,c->bcb')
+        sage: sorted(m.infinite_repetitions_growing())
         [word: bc, word: cb]
     """
     if not self.is_endomorphism():
@@ -222,9 +217,8 @@ def infinite_repetitions_growing(self):
             while vq[m*v.length():(m+1)*v.length()] == v:
                 m += 1
             if m >= 2 and m*v.length() == vq.length():
-                res = k(v).primitive()
-                for x in res.conjugates_iterator():
-                    result.add(x)
+                result.update(k(v).primitive().conjugates_iterator())
+
     return result
 
 def is_repetitive(self):
@@ -358,7 +352,7 @@ def simplify(self, Z=None):
         WordMorphism: x->xyyxyz, y->xzy, z->xzz
     """
     X = self.domain().alphabet()
-    Y = self.domain().alphabet()
+    Y = self.codomain().alphabet()
     if not Z:
         Z = X
     if len(Z) < len(X) - 1:
@@ -366,7 +360,7 @@ def simplify(self, Z=None):
 
     f = self._morph
     if len(Y) < len(X):
-        k = {letter1 : [letter2] for letter1, letter2 in zip(Z, Y)}
+        k = {letter1 : self.codomain()([letter2]) for letter1, letter2 in zip(Z, Y)}
     else:
         k_wip = dict(f)
         for letter, image in f.items():
@@ -463,6 +457,7 @@ def simplify_injective(self, Z=None):
     """
     if not self.is_endomorphism():
         raise TypeError(f'self ({self}) is not an endomorphism')
+
     h, k = simplify(self, Z)
     g = h * k
     for i in count(start=1):

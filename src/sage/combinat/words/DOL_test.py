@@ -44,6 +44,26 @@ def _test(logger=None):
         return wrapper
     return decorator
 
+@_test([0, 0])
+def test_infinite_repetitions(f, debug, logger):
+    if f.is_erasing():
+        return
+    logger[0] += 1
+
+    limit = 6+1
+    SL = f._language_naive(limit, f.domain()(list(f.domain().alphabet())))
+    inf_reps = f.infinite_repetitions()
+    for inf_rep in inf_reps:
+        for i in range(1, 5):
+            q = len(inf_rep) * i
+            if q >= limit:
+                continue
+            logger[1] += 1
+            if inf_rep ** i not in SL:
+                print(f)
+                print(inf_rep, i)
+                assert(False)
+
 @_test([0])
 def test_is_injective(h, debug, logger):
     """
@@ -57,8 +77,11 @@ def test_is_injective(h, debug, logger):
     if debug: print(is_injective2)
     assert(is_injective1 == is_injective2)
     if is_injective1: logger[0] += 1
+    else:
+        _, u, v = h.is_injective_v2(True)
+        assert(h(u) == h(v))
 
-@_test()
+@_test() # broke
 def test_unbounded_letters(h, debug, logger):
     unbounded1 = set(h.unbounded_letters())
     if debug: print(sorted(unbounded1))
@@ -105,84 +128,6 @@ def find_counter_examples(h, debug, logger):
             if not ncfe:
                 print(h)
                 assert(h.is_injective())
-
-@_test([0])
-def tmp(h, debug, logger):
-    try:
-        f, g = h.simplify_attempt()
-        k = f * g
-    except ValueError:
-        return
-    try:
-        f2, g2 = k.simplify_attempt()
-        k2 = f2 * g2
-    except ValueError:
-        return
-    logger[0] += 1
-    if debug: print(f'k: {k}\nf: {f}\ng: {g}\nk2: {k2}\nf2: {f2}\ng2: {g2}')
-    F = f2 * f
-    G = g * g2
-    if debug: print(f'F = f2 * f: {F}\nG = g * g2: {G}\nF * G: {F * G}\nG * F: {G * F}')
-    assert(h**2 == G * F)
-    assert(k2**2 == F * G)
-
-@_test()
-def tmp2(h, debug, logger):
-    h._codomain = h._domain
-    nongrowing = h.infinite_repetitions_nongrowing()
-    growing = h.infinite_repetitions_growing()
-    if not (nongrowing and growing):
-        return
-    print(f'\n{h}')
-    print(f'nongrowing:\n{nongrowing}')
-    print(f'growing:\n{growing}')
-
-@_test([0])
-def tmp3(h, debug, logger):
-    h._codomain = h._domain
-    gen = h.iter_inf_factors_without_growing_letters()
-    lst = list(gen)
-    if not lst:
-        return
-    logger[0] += 1
-    print(f'\n{h}')
-    for x in lst:
-        print(x)
-
-@_test([0, 0])
-def tmp4(h, debug, logger):
-    h._codomain = h._domain
-    B = h.is_pushy()
-    logger[0] += int(B)
-    U = h.is_unboundedly_rep()
-    logger[1] += int(U)
-    if B and U:
-        print(f'\n{h}')
-        print(list(h.iter_inf_factors_without_growing_letters()))
-        print(list(h.iter_inf_factors_with_growing_letter()))
-
-@_test()
-def tmp5(h, debug, logger):
-    h._codomain = h._domain
-    x = list(h.iter_inf_factors_without_growing_letters())
-    y = list(h.iter_inf_factors_without_growing_letters_OLD())
-    if x != y:
-        print(f'\n{h}')
-        print(x)
-        print(y)
-        assert(False)
-
-@_test()
-def tmp6(h, debug, logger):
-    if not h.is_injective():
-        x = h.simplify()
-        y = h.simplify_OLD()
-        if not x == y:
-            print(x[0] * x[1])
-            print(x)
-            print(y)
-            print(y[0] * y[1])
-            assert(False)
 
 # ------------------------------------------------------------------------------
 # https://goo.gl/kkF5SY
