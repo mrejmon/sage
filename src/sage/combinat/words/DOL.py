@@ -303,8 +303,8 @@ def simplify(self, Z=None):
 
     Let `f: X^* \rightarrow Y^*` be a morphism. Then `f` is simplifiable with
     respect to morphisms `h: X^* \rightarrow Z^*` and `k: Z^* \rightarrow Y^*`,
-    if `f = k \cdot h` and `\#Z < \#X`. If also `X = Y`, then morphism
-    `g: Z^* \rightarrow Z^* = h \cdot k` is a simplification of `f`
+    if `f = k \circ h` and `\#Z < \#X`. If also `X = Y`, then morphism
+    `g: Z^* \rightarrow Z^* = h \circ k` is a simplification of `f`
     (with respect to `h` and `k`). Simplification preserves some properties of
     the original morphism (e.g. infinite repetitions).
 
@@ -433,8 +433,8 @@ def simplify_injective(self, Z=None):
     Let `f: X^* \rightarrow X^*` be a morphism. Then `g: Z^* \rightarrow Z^*` is
     an injective simplification of `f` with respect to morphisms
     `h: X^* \rightarrow Z^*` and `k: Z^* \rightarrow X^*` and a positive integer
-    `i`, if `g` is injective and `\#Z < \#X` and `g^i = h \cdot k` and
-    `f^i = k \cdot h`.
+    `i`, if `g` is injective and `\#Z < \#X` and `g^i = h \circ k` and
+    `f^i = k \circ h`.
 
     For more information see Section 4 in [KO2000]_.
 
