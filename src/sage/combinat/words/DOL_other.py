@@ -144,3 +144,120 @@ def is_injective_v2(self, certificate=False):
                     tails[new_tail] = (preimage1 + [letter], preimage2)
 
     return True if not certificate else (True, None, None)
+
+from itertools import count
+from collections import Counter
+
+from sage.rings.all import ZZ
+from sage.combinat.words.words import FiniteWords
+from sage.combinat.words.morphism import get_cycles
+
+def smallest_cyclic_shift(self):
+    s = self + self
+    n = len(s)
+    i = 0
+    ans = 0
+    while i < n // 2:
+        ans = i
+        j = i + 1
+        k = i
+        while j < n and s[k] <= s[j]:
+            if s[k] < s[j]:
+                k = i
+            else:
+                k += 1
+            j += 1
+        while i <= k:
+            i += j - k
+    return s[ans:n//2+ans]
+
+def infinite_repetitions_nogrowing_v2(self):
+    def impl():
+        U = {}
+        for x in unbounded:
+            hx = g.image(x)
+            for i, y in enumerate(hx):
+                if y in unbounded:
+                    break
+            U[x] = y, hx[:i]
+        for cycle in get_cycles(lambda x: U[x][0], domain=unbounded):
+            if all(not U[x][1] for x in cycle):
+                continue
+            for cycle in g.domain()(cycle).conjugates_iterator():
+                u = g.domain()()
+                for x in cycle:
+                    u = g(u)
+                    u = u + U[x][1]
+                history = dict({u : 0})
+                for i in count(1):
+                    u = g(u)
+                    if u in history:
+                        s = ZZ(history[u])
+                        t = ZZ(i - history[u])
+                        break
+                    history[u] = i
+                q = len(cycle)
+                l0 = (s / q).ceil() * q
+                l1 = l0 + (t.lcm(q) / q)
+                gq = g.restrict_domain(bounded) ** q
+                uql = gq(u, l0)
+                res = g.domain()()
+                for _ in range(l0+1, l1+1):
+                    uql = gq(uql)
+                    res = uql + res
+                yield k(res.primitive()).primitive()
+
+    if not self.is_endomorphism():
+        raise TypeError(f'self ({self}) is not an endomorphism')
+    try:
+        g, _, k, _ = self.simplify_injective()
+    except ValueError:
+        g, k = self, self.domain().identity_morphism()
+    unbounded = set(g.growing_letters())
+    bounded = set(g.domain().alphabet()) - unbounded
+
+    result = set()
+    for x in impl():
+        result.add(smallest_cyclic_shift(x))
+    g, k = g.reversal(), k.reversal()
+    for x in impl():
+        result.add(smallest_cyclic_shift(self.domain()(reversed(x))))
+
+    return result
+
+def infinite_repetitions_growing_v2(self):
+    if not self.is_endomorphism():
+        raise TypeError(f'self ({self}) is not an endomorphism')
+    try:
+        g, _, k, _ = self.simplify_injective()
+    except ValueError:
+        g, k = self, self.domain().identity_morphism()
+    unbounded = set(g.growing_letters())
+
+    result = set()
+    for equivalence_class in g.periodic_points():
+        q = len(equivalence_class)
+        gq = g**q
+        for periodic_point in equivalence_class:
+            # Check if this periodic point is a periodic infinite word.
+            periodic_point = periodic_point[:1]
+            letter_cnts = Counter(periodic_point)
+            for _ in g.domain().alphabet():
+                previous_length = periodic_point.length()
+                periodic_point = gq(periodic_point)
+                letter_cnts.update(periodic_point[previous_length:])
+                if any(letter_cnts[letter] >= 2 for letter in unbounded):
+                    break
+            else: # nobreak
+                continue
+            if letter_cnts[periodic_point[0]] < 2:
+                continue
+            v = periodic_point[:periodic_point.find(periodic_point[0], start=1)]
+            vq = gq(v)
+            m = 0
+            while vq[m*v.length():(m+1)*v.length()] == v:
+                m += 1
+            if m >= 2 and m*v.length() == vq.length():
+                result.add(smallest_cyclic_shift(k(v).primitive()))
+
+    return result

@@ -3180,7 +3180,9 @@ class WordMorphism(SageObject):
         is_endomorphism_alternative,
         periodic_points_fixed,
         growing_letters_alternative,
-        is_injective_v2
+        is_injective_v2,
+        infinite_repetitions_nogrowing_v2,
+        infinite_repetitions_growing_v2,
     )
     is_endomorphism = is_endomorphism_alternative
     periodic_points = periodic_points_fixed
