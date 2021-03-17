@@ -1,6 +1,3 @@
-from itertools import count
-from collections import defaultdict, Counter
-
 from sage.rings.all import ZZ
 from sage.combinat.words.words import FiniteWords
 from sage.combinat.words.morphism import get_cycles
