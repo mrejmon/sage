@@ -1,5 +1,5 @@
 from itertools import count
-from collections import Counter
+from collections import defaultdict, Counter
 
 from sage.rings.all import ZZ
 from sage.combinat.words.words import FiniteWords
