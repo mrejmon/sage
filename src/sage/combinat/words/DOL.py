@@ -52,8 +52,9 @@ def is_injective(self):
 
 def infinite_repetitions(self):
     r"""
-    Return the set of all infinite repetitions of the D0L system made from this
-    morphism and an arbitrary axiom, from which all letters are accessible.
+    Return the set of all primitive infinite repetitions of the D0L system made
+    from this morphism and an arbitrary axiom, from which all letters are
+    accessible.
 
     Requires this morphism to be an endomorphism.
 
@@ -90,9 +91,9 @@ def infinite_repetitions(self):
 
 def infinite_repetitions_nogrowing(self):
     """
-    Return the set of all infinite repetitions, which contain no growing
-    letters, of the D0L system made from this morphism and an arbitrary axiom,
-    from which all letters are accessible.
+    Return the set of all primitive infinite repetitions, which contain no
+    growing letters, of the D0L system made from this morphism and an arbitrary
+    axiom, from which all letters are accessible.
 
     Requires this morphism to be an endomorphism.
 
@@ -161,9 +162,9 @@ def infinite_repetitions_nogrowing(self):
 
 def infinite_repetitions_growing(self):
     """
-    Return the set of all infinite repetitions, which contain at least one
-    growing letter, of the D0L system made from this morphism and an arbitrary
-    axiom, from which all letters are accessible.
+    Return the set of all primitive infinite repetitions, which contain at least
+    one growing letter, of the D0L system made from this morphism and an
+    arbitrary axiom, from which all letters are accessible.
 
     Requires this morphism to be an endomorphism.
 
