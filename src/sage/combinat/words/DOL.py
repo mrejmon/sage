@@ -299,7 +299,7 @@ def simplify(self, Z=None):
 
     Let `f: X^* \rightarrow Y^*` be a morphism. Then `f` is simplifiable with
     respect to morphisms `h: X^* \rightarrow Z^*` and `k: Z^* \rightarrow Y^*`,
-    if `f = k \circ h` and `\#Z < \#X`. If also `X = Y`, then morphism
+    if `f = k \circ h` and `|Z| < |X|`. If also `X = Y`, then morphism
     `g: Z^* \rightarrow Z^* = h \circ k` is a simplification of `f`
     (with respect to `h` and `k`). Simplification preserves some properties of
     the original morphism (e.g. infinite repetitions).
@@ -308,8 +308,8 @@ def simplify(self, Z=None):
 
     INPUT:
 
-    - ``Z`` -- iterable used (or its subset) as a domain for the simplification,
-      default is ``self.domain().alphabet()``
+    - ``Z`` -- sequence used (or its subsequence) as a domain for the
+      simplification, default is ``self.domain().alphabet()``
 
     EXAMPLES:
 
