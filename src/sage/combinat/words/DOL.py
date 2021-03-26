@@ -433,15 +433,15 @@ def simplify_injective(self, Z=None):
     Let `f: X^* \rightarrow X^*` be a morphism. Then `g: Z^* \rightarrow Z^*` is
     an injective simplification of `f` with respect to morphisms
     `h: X^* \rightarrow Z^*` and `k: Z^* \rightarrow X^*` and a positive integer
-    `i`, if `g` is injective and `\#Z < \#X` and `g^i = h \circ k` and
+    `i`, if `g` is injective and `|Z| < |X|` and `g^i = h \circ k` and
     `f^i = k \circ h`.
 
     For more information see Section 4 in [KO2000]_.
 
     INPUT:
 
-    - ``Z`` -- iterable used (or its subset) as a domain for the simplification,
-      default is ``self.domain().alphabet()``
+    - ``Z`` -- sequence used (or its subsequence) as a domain for the
+      simplification, default is ``self.domain().alphabet()``
 
     EXAMPLES::
 
