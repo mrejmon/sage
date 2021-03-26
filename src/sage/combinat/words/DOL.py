@@ -12,8 +12,8 @@ def is_injective(self):
     ALGORITHM:
 
     Slightly modified version of :wikipedia:`Sardinas–Patterson_algorithm`.
-    Time complexity is `O(L^2)`, where `L` is the sum of lengths of images
-    of this morphism.
+    Time complexity is on average quadratic with regards to the size of the
+    morphism.
 
     EXAMPLES::
 
@@ -294,8 +294,8 @@ def simplify(self, Z=None):
     If this morphism is non-injective, this function always succeeds, but can
     fail (raise ``ValueError``) if it is injective, even it if is simplifiable.
 
-    Time complexity is `O(L^2)`, where `L` is the sum of lengths of images
-    of this morphism.
+    Time complexity is on average quadratic with regards to the size of the
+    morphism.
 
     Let `f: X^* \rightarrow Y^*` be a morphism. Then `f` is simplifiable with
     respect to morphisms `h: X^* \rightarrow Z^*` and `k: Z^* \rightarrow Y^*`,
