@@ -295,15 +295,18 @@ def simplify(self, Z=None):
     If this morphism is non-injective, this function always succeeds, but can
     fail (raise ``ValueError``) if it is injective, even it if is simplifiable.
 
-    Time complexity is on average quadratic with regards to the size of the
-    morphism.
-
     Let `f: X^* \rightarrow Y^*` be a morphism. Then `f` is simplifiable with
     respect to morphisms `h: X^* \rightarrow Z^*` and `k: Z^* \rightarrow Y^*`,
     if `f = k \circ h` and `|Z| < |X|`. If also `X = Y`, then morphism
     `g: Z^* \rightarrow Z^* = h \circ k` is a simplification of `f`
-    (with respect to `h` and `k`). Simplification preserves some properties of
-    the original morphism (e.g. infinite repetitions).
+    (with respect to `h` and `k`).
+
+    Therefore a morphism is simplifiable if it contains "more letters than is
+    needed". Simplification preserves some properties of the original morphism
+    (e.g. repetitiveness).
+
+    Time complexity is on average quadratic with regards to the size of the
+    morphism.
 
     For more information see Section 3 in [KO2000]_.
 
@@ -326,6 +329,10 @@ def simplify(self, Z=None):
         WordMorphism: x->xyyxyyy, y->xy
         sage: k * h == f
         True
+        sage: g('x')
+        word: xyyxyyy
+        sage: f(k('x'))
+        word: bcaabcaaa
 
     Example of a non-simplifiable morphism::
 
