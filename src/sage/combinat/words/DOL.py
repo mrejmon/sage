@@ -145,10 +145,8 @@ def infinite_repetitions_nogrowing(self):
 
     if not self.is_endomorphism():
         raise TypeError(f'self ({self}) is not an endomorphism')
-    try:
-        g, _, k, _ = self.simplify_injective()
-    except ValueError:
-        g, k = self, self.domain().identity_morphism()
+
+    g, _, k, _ = self.simplify_injective()
     unbounded = set(g.growing_letters())
     bounded = set(g.domain().alphabet()) - unbounded
 
@@ -187,10 +185,8 @@ def infinite_repetitions_growing(self):
     """
     if not self.is_endomorphism():
         raise TypeError(f'self ({self}) is not an endomorphism')
-    try:
-        g, _, k, _ = self.simplify_injective()
-    except ValueError:
-        g, k = self, self.domain().identity_morphism()
+
+    g, _, k, _ = self.simplify_injective()
     unbounded = set(g.growing_letters())
 
     result = set()
@@ -425,8 +421,10 @@ def simplify_injective(self, Z=None):
     Return a quadruplet `(g, h, k, i)`, where `g` is an injective simplification
     of this morphism with respect to `h`, `k` and `i`.
 
-    If this morphism is non-injective, this function always succeeds, but can
-    fail (raise ``ValueError``) if it is injective, even it if is simplifiable.
+    For ease of use if this morphism is already injective, a quadruplet
+    `(g, h, k, i)` is still returned, where `g` and `h` are equal to this
+    morphism, `k` is the identity morphism and `i` is 1 (but the argument `Z`
+    is still respected).
 
     Requires this morphism to be an endomorphism.
 
@@ -458,11 +456,24 @@ def simplify_injective(self, Z=None):
     if not self.is_endomorphism():
         raise TypeError(f'self ({self}) is not an endomorphism')
 
+    if self.is_injective():
+        X = self.domain().alphabet()
+        if not Z:
+            Z = X
+        if len(Z) < len(X):
+            raise ValueError(f'alphabet should have length at least {len(X)}, is {len(Z)}')
+        Z_star = FiniteWords(Z[:len(X)])
+        k = type(self)({z : x for x, z in zip(X, Z)}, domain=Z_star, codomain=self.domain())
+        k_inverse = type(self)({x : z for x, z in zip(X, Z)}, domain=self.domain(), codomain=Z_star)
+        h = k_inverse * f
+        return h * k, h, k, 1
+
+    i = 1
     h, k = simplify(self, Z)
     g = h * k
-    for i in count(start=1):
-        try:
-            h_new, k_new = simplify(g, Z)
-            g, h, k = h_new * k_new, h_new * h, k * k_new
-        except:
-            return g, h, k, i
+
+    while not g.is_injective():
+        h_new, k_new = simplify(g, Z)
+        g, h, k, i = h_new * k_new, h_new * h, k * k_new, i + 1
+
+    return g, h, k, i
