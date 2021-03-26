@@ -429,12 +429,12 @@ def simplify_injective(self, Z=None):
     Return a quadruplet `(g, h, k, i)`, where `g` is an injective simplification
     of this morphism with respect to `h`, `k` and `i`.
 
-    For ease of use if this morphism is already injective, a quadruplet
-    `(g, h, k, i)` is still returned, where `g` and `h` are equal to this
-    morphism, `k` is the identity morphism and `i` is 1 (but the argument `Z`
-    is still respected).
-
     Requires this morphism to be an endomorphism.
+
+    Basically calls :meth:`simplify` until the result is injective. If this
+    morphism is already injective, instead of raising an exception a quadruplet
+    `(g, h, k, i)` is still returned, where `g` and `h` are equal to this
+    morphism, `k` is the identity morphism and `i` is 1.
 
     Let `f: X^* \rightarrow X^*` be a morphism. Then `g: Z^* \rightarrow Z^*` is
     an injective simplification of `f` with respect to morphisms
@@ -465,6 +465,8 @@ def simplify_injective(self, Z=None):
         raise TypeError(f'self ({self}) is not an endomorphism')
 
     if self.is_injective():
+        # Without optional argument Z this code could be just
+        # return self, self, self.domain().identity_morphism(), 1
         X = self.domain().alphabet()
         if not Z:
             Z = X
