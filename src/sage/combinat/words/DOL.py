@@ -465,17 +465,18 @@ def simplify_injective(self, Z=None):
         raise TypeError(f'self ({self}) is not an endomorphism')
 
     if self.is_injective():
-        # Without optional argument Z this code could be just
-        # return self, self, self.domain().identity_morphism(), 1
-        X = self.domain().alphabet()
+        Y_star = self.codomain()
+        Y = Y_star.alphabet()
         if not Z:
-            Z = X
-        if len(Z) < len(X):
-            raise ValueError(f'alphabet should have length at least {len(X)}, is {len(Z)}')
-        Z_star = FiniteWords(Z[:len(X)])
-        k = type(self)({z : x for x, z in zip(X, Z)}, domain=Z_star, codomain=self.domain())
-        k_inverse = type(self)({x : z for x, z in zip(X, Z)}, domain=self.domain(), codomain=Z_star)
-        h = k_inverse * f
+            Z = Y
+        if len(Z) < len(Y):
+            raise ValueError(f'alphabet should have length at least {len(Y)}, is {len(Z)}')
+        Z_star = FiniteWords(Z[:len(Y)])
+
+        k = type(self)({z : [y] for y, z in zip(Y, Z)}, domain=Z_star, codomain=Y_star)
+        k_inverse = type(self)({y : [z] for y, z in zip(Y, Z)}, domain=Y_star, codomain=Z_star)
+        h = k_inverse * self
+
         return h * k, h, k, 1
 
     i = 1
