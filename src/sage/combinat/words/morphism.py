@@ -3168,7 +3168,7 @@ class WordMorphism(SageObject):
     from .DOL import ( # * doesn't work here.
         is_injective,
         infinite_repetitions,
-        infinite_repetitions_nogrowing,
+        infinite_repetitions_bounded,
         infinite_repetitions_growing,
         is_repetitive,
         is_pushy,

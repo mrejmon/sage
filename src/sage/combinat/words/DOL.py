@@ -87,9 +87,9 @@ def infinite_repetitions(self):
         sage: all(x^3 in SL for x in inf_reps)
         True
     """
-    return self.infinite_repetitions_nogrowing() | self.infinite_repetitions_growing()
+    return self.infinite_repetitions_bounded() | self.infinite_repetitions_growing()
 
-def infinite_repetitions_nogrowing(self):
+def infinite_repetitions_bounded(self):
     """
     Return the set of all primitive infinite repetitions, which contain no
     growing letters, of the D0L system made from this morphism and an arbitrary
@@ -102,11 +102,11 @@ def infinite_repetitions_nogrowing(self):
     EXAMPLES::
 
         sage: m = WordMorphism('a->aba,b->aba,c->cd,d->e,e->d')
-        sage: sorted(m.infinite_repetitions_nogrowing())
+        sage: sorted(m.infinite_repetitions_bounded())
         [word: de, word: ed]
 
         sage: m = WordMorphism('c->d,d->c,e->fc,f->ed')
-        sage: sorted(m.infinite_repetitions_nogrowing())
+        sage: sorted(m.infinite_repetitions_bounded())
         [word: c, word: d]
     """
     def impl():
@@ -264,7 +264,7 @@ def is_pushy(self):
         sage: WordMorphism('a->abc,b->,c->bcb').is_pushy()
         True
     """
-    return bool(self.infinite_repetitions_nogrowing())
+    return bool(self.infinite_repetitions_bounded())
 
 def is_unboundedly_repetitive(self):
     """
