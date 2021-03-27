@@ -5,48 +5,6 @@ from sage.rings.all import ZZ
 from sage.combinat.words.words import FiniteWords
 from sage.combinat.words.morphism import get_cycles
 
-def mortal_letters(self):
-    """
-    Return the set of mortal letters.
-
-    Let `m` be this morphism. A letter `a` is mortal iff there exists a positive
-    integer `k` such that `m^k(a) = \varepsilon`.
-
-    EXAMPLES::
-
-        sorted(sage: WordMorphism('a->abc,b->cc,c->').mortal_letters())
-        ['b', 'c']
-
-    TESTS:
-
-    Non-endomorphism check::
-
-        sorted(sage: WordMorphism('a->edf,b->cc,c->').mortal_letters())
-        ['b', 'c']
-    """
-    domainA = self.domain().alphabet()
-    codomainA = self.codomain().alphabet()
-    matrix = self.incidence_matrix()
-    lens = [len(self._morph[x]) for x in domainA]
-
-    mortal = set()
-    todo = [j for j, e in enumerate(lens) if e == 0]
-    while todo:
-        j = todo.pop()
-        letter = domainA.unrank(j)
-        mortal.add(letter)
-        try:
-            i = codomainA.rank(letter)
-        except ValueError:
-            continue
-        row = matrix.row(i)
-        for j, e in enumerate(row):
-            if e != 0: # this check is necessary to prevent repeated inclusion in todo
-                lens[j] -= e
-                if lens[j] == 0:
-                    todo.append(j)
-    return mortal
-
 def is_injective(self):
     """
     Return whether this morphism is injective.

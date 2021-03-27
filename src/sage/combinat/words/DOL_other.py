@@ -261,3 +261,40 @@ def infinite_repetitions_growing_v2(self):
                 result.add(smallest_cyclic_shift(k(v).primitive()))
 
     return result
+
+def mortal_letters(self):
+    """
+    Return the set of mortal letters.
+
+    Requires this morphism to be an endomorphism.
+
+    Let `m` be this morphism. A letter `a` is mortal iff there exists a positive
+    integer `k` such that `m^k(a) = \varepsilon`.
+
+    EXAMPLES::
+
+        sorted(sage: WordMorphism('a->abc,b->cc,c->').mortal_letters())
+        ['b', 'c']
+    """
+    if not self.is_endomorphism():
+        raise TypeError(f'self ({self}) is not an endomorphism')
+
+    domainA = self.domain().alphabet()
+    codomainA = self.codomain().alphabet()
+    matrix = self.incidence_matrix()
+    lens = [len(self._morph[x]) for x in domainA]
+
+    mortal = set()
+    todo = [j for j, e in enumerate(lens) if e == 0]
+    while todo:
+        j = todo.pop()
+        letter = domainA.unrank(j)
+        mortal.add(letter)
+        i = codomainA.rank(letter)
+        row = matrix.row(i)
+        for j, e in enumerate(row):
+            if e != 0: # this check is necessary to prevent repeated inclusion in todo
+                lens[j] -= e
+                if lens[j] == 0:
+                    todo.append(j)
+    return mortal

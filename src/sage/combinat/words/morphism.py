@@ -3166,7 +3166,6 @@ class WordMorphism(SageObject):
 
     # Probably temporary.
     from .DOL import ( # * doesn't work here.
-        mortal_letters,
         is_injective,
         infinite_repetitions,
         infinite_repetitions_bounded,
@@ -3184,6 +3183,7 @@ class WordMorphism(SageObject):
         is_injective_v2,
         infinite_repetitions_nogrowing_v2,
         infinite_repetitions_growing_v2,
+        mortal_letters,
     )
     is_endomorphism = is_endomorphism_alternative
     periodic_points = periodic_points_fixed
