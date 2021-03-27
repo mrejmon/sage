@@ -21,7 +21,7 @@ def reach(self, w):
         raise TypeError(f'self ({self}) is not an endomorphism')
 
     visited = set(w)
-    todo = list(s)
+    todo = list(visited)
     while todo:
         a = todo.pop()
         for b in self.image(a):
@@ -75,7 +75,7 @@ def is_injective(self):
             check(v, u)
     return True
 
-def infinite_repetitions(self):
+def infinite_repetitions(self, w=None):
     r"""
     Return the set of all primitive infinite repetitions of the D0L system made
     from this morphism and an arbitrary axiom, from which all letters are
@@ -112,9 +112,9 @@ def infinite_repetitions(self):
         sage: all(x^3 in SL for x in inf_reps)
         True
     """
-    return self.infinite_repetitions_bounded() | self.infinite_repetitions_growing()
+    return self.infinite_repetitions_bounded(w) | self.infinite_repetitions_growing(w)
 
-def infinite_repetitions_bounded(self):
+def infinite_repetitions_bounded(self, w=None):
     """
     Return the set of all primitive infinite repetitions, which contain no
     growing letters, of the D0L system made from this morphism and an arbitrary
@@ -169,12 +169,12 @@ def infinite_repetitions_bounded(self):
                     res = uql + res
                 yield k(res.primitive()).primitive()
 
-    if not self.is_endomorphism():
-        raise TypeError(f'self ({self}) is not an endomorphism')
-
-    g, _, k, _ = self.simplify_injective()
+    if not w:
+        w = self._morph
+    f = self.restrict_domain(self.reach(w))
+    g, _, k, _ = f.simplify_injective()
     unbounded = set(g.growing_letters())
-    bounded = set(g.domain().alphabet()) - unbounded
+    bounded = set(g._morph) - unbounded
 
     result = set()
     for x in impl():
@@ -185,7 +185,7 @@ def infinite_repetitions_bounded(self):
 
     return result
 
-def infinite_repetitions_growing(self):
+def infinite_repetitions_growing(self, w=None):
     """
     Return the set of all primitive infinite repetitions, which contain at least
     one growing letter, of the D0L system made from this morphism and an
@@ -209,10 +209,10 @@ def infinite_repetitions_growing(self):
         sage: sorted(m.infinite_repetitions_growing())
         [word: bc, word: cb]
     """
-    if not self.is_endomorphism():
-        raise TypeError(f'self ({self}) is not an endomorphism')
-
-    g, _, k, _ = self.simplify_injective()
+    if not w:
+        w = self._morph
+    f = self.restrict_domain(self.reach(w))
+    g, _, k, _ = f.simplify_injective()
     unbounded = set(g.growing_letters())
 
     result = set()
@@ -243,7 +243,7 @@ def infinite_repetitions_growing(self):
 
     return result
 
-def is_repetitive(self):
+def is_repetitive(self, w=None):
     """
     Return whether the D0L system made from this morphism and an arbitrary
     axiom, from which all letters are accessible, is repetitive.
@@ -266,9 +266,9 @@ def is_repetitive(self):
         sage: WordMorphism('a->ab,b->ba').is_repetitive()
         False
     """
-    return self.is_pushy() or self.is_unboundedly_repetitive()
+    return self.is_pushy(w) or self.is_unboundedly_repetitive(w)
 
-def is_pushy(self):
+def is_pushy(self, w=None):
     """
     Return whether the D0L system made from this morphism and an arbitrary
     axiom, from which all letters are accessible, is pushy.
@@ -289,9 +289,9 @@ def is_pushy(self):
         sage: WordMorphism('a->abc,b->,c->bcb').is_pushy()
         True
     """
-    return bool(self.infinite_repetitions_bounded())
+    return bool(self.infinite_repetitions_bounded(w))
 
-def is_unboundedly_repetitive(self):
+def is_unboundedly_repetitive(self, w=None):
     """
     Return whether the D0L system made from this morphism and an arbitrary
     axiom, from which all letters are accessible, is unboundedly repetitive.
@@ -310,7 +310,7 @@ def is_unboundedly_repetitive(self):
         sage: WordMorphism('a->abc,b->,c->bcb').is_unboundedly_repetitive()
         False
     """
-    return bool(self.infinite_repetitions_growing())
+    return bool(self.infinite_repetitions_growing(w))
 
 def simplify(self, Z=None):
     r"""
