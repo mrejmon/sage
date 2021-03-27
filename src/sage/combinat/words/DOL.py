@@ -297,7 +297,7 @@ def simplify(self, Z=None):
 
     Let `f: X^* \rightarrow Y^*` be a morphism. Then `f` is simplifiable with
     respect to morphisms `h: X^* \rightarrow Z^*` and `k: Z^* \rightarrow Y^*`,
-    if `f = k \circ h` and `|Z| < |X|`. If also `X = Y`, then morphism
+    if `f = k \circ h` and `|Z| < |X|`. If also `Y \subseteq X`, then morphism
     `g: Z^* \rightarrow Z^* = h \circ k` is a simplification of `f`
     (with respect to `h` and `k`).
 
@@ -436,11 +436,11 @@ def simplify_injective(self, Z=None):
     `(g, h, k, i)` is still returned, where `g` and `h` are equal to this
     morphism, `k` is the identity morphism and `i` is 1.
 
-    Let `f: X^* \rightarrow X^*` be a morphism. Then `g: Z^* \rightarrow Z^*` is
-    an injective simplification of `f` with respect to morphisms
-    `h: X^* \rightarrow Z^*` and `k: Z^* \rightarrow X^*` and a positive integer
-    `i`, if `g` is injective and `|Z| < |X|` and `g^i = h \circ k` and
-    `f^i = k \circ h`.
+    Let `f: X^* \rightarrow Y^*` be a morphism and `Y \subseteq X`. Then
+    `g: Z^* \rightarrow Z^*` is an injective simplification of `f` with respect
+    to morphisms `h: X^* \rightarrow Z^*` and `k: Z^* \rightarrow Y^*` and a
+    positive integer `i`, if `g` is injective and `|Z| < |X|` and
+    `g^i = h \circ k` and `f^i = k \circ h`.
 
     For more information see Section 4 in [KO2000]_.
 
