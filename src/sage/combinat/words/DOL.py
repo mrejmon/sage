@@ -479,4 +479,3 @@ def simplify_injective(self):
             g, h, k = h_new * k_new, h_new * h, k * k_new
         except ValueError:
             return g, h, k, i
-    return g, h, k, i
