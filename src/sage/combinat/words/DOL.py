@@ -474,7 +474,7 @@ def simplify(self, Z=None):
 
     return h, k
 
-def simplify_injective(self, Z=None):
+def simplify_injective(self):
     r"""
     Return a quadruplet `(g, h, k, i)`, where `g` is an injective simplification
     of this morphism with respect to `h`, `k` and `i`.
@@ -484,7 +484,7 @@ def simplify_injective(self, Z=None):
     Basically calls :meth:`simplify` until the result is injective. If this
     morphism is already injective, instead of raising an exception a quadruplet
     `(g, h, k, i)` is still returned, where `g` and `h` are equal to this
-    morphism, `k` is the identity morphism and `i` is 1.
+    morphism, `k` is the identity morphism and `i` is 0.
 
     Let `f: X^* \rightarrow Y^*` be a morphism and `Y \subseteq X`. Then
     `g: Z^* \rightarrow Z^*` is an injective simplification of `f` with respect
@@ -494,47 +494,31 @@ def simplify_injective(self, Z=None):
 
     For more information see Section 4 in [KO2000]_.
 
-    INPUT:
-
-    - ``Z`` -- sequence used (or its subsequence) as a domain for the
-      simplification, default is ``self.domain().alphabet()``
-
     EXAMPLES::
 
         sage: f = WordMorphism('a->abc,b->a,c->bc')
-        sage: g, h, k, i = f.simplify_injective('xy'); g, h, k, i
-        (WordMorphism: x->xx, WordMorphism: a->xx, b->x, c->x, WordMorphism: x->abc, 2)
-        sage: g.is_injective()
+        sage: g, h, k, i = f.simplify_injective(); g, h, k, i
+        (WordMorphism: a->aa, WordMorphism: a->aa, b->a, c->a, WordMorphism: a->abc, 2)
+        sage: sage: g.is_injective()
         True
-        sage: g ** i == h * k
+        sage: sage: g ** i == h * k
         True
-        sage: f ** i == k * h
+        sage: sage: f ** i == k * h
         True
     """
     if not self.is_endomorphism():
         raise TypeError(f'self ({self}) is not an endomorphism')
 
-    if self.is_injective():
-        Y_star = self.codomain()
-        Y = Y_star.alphabet()
-        if not Z:
-            Z = Y
-        if len(Z) < len(Y):
-            raise ValueError(f'Z should have length at least {len(Y)}, is {len(Z)}')
-
-        Z_star = FiniteWords(Z[:len(Y)])
-        k = type(self)({z : [y] for y, z in zip(Y, Z)}, domain=Z_star, codomain=Y_star)
-        k_inverse = type(self)({y : [z] for y, z in zip(Y, Z)}, domain=Y_star, codomain=Z_star)
-        h = k_inverse * self
-
-        return h * k, h, k, 1
-
-    i = 1
-    h, k = simplify(self, Z)
+    try:
+        h, k = simplify(self)
+    except ValueError:
+        return self, self, self.domain().identity_morphism(), 0
     g = h * k
 
-    while not g.is_injective():
-        h_new, k_new = simplify(g, Z)
-        g, h, k, i = h_new * k_new, h_new * h, k * k_new, i + 1
-
+    for i in count(start=1):
+        try:
+            h_new, k_new = simplify(g)
+            g, h, k = h_new * k_new, h_new * h, k * k_new
+        except ValueError:
+            return g, h, k, i
     return g, h, k, i
