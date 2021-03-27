@@ -7140,6 +7140,11 @@ class FiniteWord_class(Word_class):
         else:
             return False
 
+    # Probably temporary.
+    from .DOL import ( # * doesn't work here.
+        smallest_cyclic_shift,
+    )
+
 
 #######################################################################
 

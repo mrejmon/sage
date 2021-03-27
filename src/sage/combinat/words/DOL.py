@@ -5,8 +5,22 @@ from sage.rings.all import ZZ
 from sage.combinat.words.words import FiniteWords
 from sage.combinat.words.morphism import get_cycles
 
-def reach(self, w):
+# finite_word.py
+def smallest_cyclic_shift(self, w):
     """
+    """
+    start, end = 0, 0
+    s2 = self**2
+    for s in s2.lyndon_factorization():
+        start = end
+        end += s.length()
+        if start < self.length() and end > self.length():
+            break
+    return s2[start:end]
+
+# morphism.py
+def reach(self, w):
+    r"""
     Return the set of letters which occur in words of `{m^n(w) | n \in \NN}`,
     where `m` is this morphism and `w` is a word inputted as a parameter.
 
@@ -178,10 +192,10 @@ def infinite_repetitions_bounded(self, w=None):
 
     result = set()
     for x in impl():
-        result.update(x.conjugates_iterator())
+        result.add(x.smallest_cyclic_shift())
     g, k = g.reversal(), k.reversal()
     for x in impl():
-        result.update(self.domain()(reversed(x)).conjugates_iterator())
+        result.add(self.domain()(reversed(x)).smallest_cyclic_shift())
 
     return result
 
@@ -239,7 +253,7 @@ def infinite_repetitions_growing(self, w=None):
             while vq[m*v.length():(m+1)*v.length()] == v:
                 m += 1
             if m >= 2 and m*v.length() == vq.length():
-                result.update(k(v).primitive().conjugates_iterator())
+                result.add(k(v).primitive().smallest_cyclic_shift())
 
     return result
 
