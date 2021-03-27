@@ -5,6 +5,31 @@ from sage.rings.all import ZZ
 from sage.combinat.words.words import FiniteWords
 from sage.combinat.words.morphism import get_cycles
 
+def reach(self, w):
+    """
+    Return the set of letters which occur in words of `{m^n(w) | n \in \NN}`,
+    where `m` is this morphism and `w` is a word inputted as a parameter.
+
+    Requires this morphism to be an endomorphism.
+
+    EXAMPLES::
+
+        sage: sorted(WordMorphism('a->abc,b->bb,c->bd,d->dd').reach('c'))
+        sage: ['b', 'c', 'd']
+    """
+    if not self.is_endomorphism():
+        raise TypeError(f'self ({self}) is not an endomorphism')
+
+    visited = set(w)
+    todo = list(s)
+    while todo:
+        a = todo.pop()
+        for b in self.image(a):
+            if b not in visited:
+                visited.add(b)
+                todo.append(b)
+    return visited
+
 def is_injective(self):
     """
     Return whether this morphism is injective.
