@@ -10,7 +10,7 @@ def mortal_letters(self):
     Return the set of mortal letters.
 
     Let `m` be this morphism. A letter `a` is mortal iff there exists a positive
-    integer `k` such that `\m^k(a) = \varepsilon`.
+    integer `k` such that `m^k(a) = \varepsilon`.
 
     EXAMPLES::
 
@@ -354,7 +354,7 @@ def simplify(self, Z=None):
 
     INPUT:
 
-    - ``Z`` -- sequence used (or its subsequence) as a domain for the
+    - ``Z`` -- iterable, whose elements are used as an alphabet for the
       simplification, default is ``self.domain().alphabet()``
 
     EXAMPLES:
@@ -399,71 +399,79 @@ def simplify(self, Z=None):
     """
     X = self.domain().alphabet()
     Y = self.codomain().alphabet()
-    if not Z:
-        Z = X
-    if len(Z) < len(X) - 1:
-        raise ValueError(f'alphabet should have length at least {len(X) - 1}, is {len(Z)}')
-
     f = self._morph
-    if len(Y) < len(X):
-        k = {letter1 : self.codomain()([letter2]) for letter1, letter2 in zip(Z, Y)}
-    else:
-        k_wip = dict(f)
-        for letter, image in f.items():
-            if not image:
-                del k_wip[letter]
 
-        to_do = set(k_wip)
+    if self.is_erasing(): # Trivial case #1.
+        k = {letter : image for letter, image in f.items() if image}
+        h = {letter : [letter] if image else [] for letter, image in f.items()}
+    elif len(Y) < len(X): # Trivial case #2.
+        k = {x : [y] for x, y in zip(X, Y)}
+        k_inverse = {y : [x] for x, y in zip(X, Y)}
+        h = {x : [k_inverse[y] for y in image] for x, image in f.items()}
+    else: # Non-trivial case.
+        k = dict(f)
+        to_do = set(k)
         to_remove = []
         while to_do:
             # min() and remove() instead of pop() to have deterministic output.
             letter1 = min(to_do)
             to_do.remove(letter1)
-            image1 = k_wip[letter1]
-            for letter2, image2 in k_wip.items():
+            image1 = k[letter1]
+            for letter2, image2 in k.items():
                 if letter1 == letter2:
                     continue
                 if image1 == image2:
                     to_remove.append(letter2)
                     to_do.discard(letter2)
                 elif image1.is_prefix(image2):
-                    k_wip[letter2] = image2[image1.length():]
+                    k[letter2] = image2[image1.length():]
                     to_do.add(letter2)
                 elif image1.is_suffix(image2):
-                    k_wip[letter2] = image2[:-image1.length()]
+                    k[letter2] = image2[:-image1.length()]
                     to_do.add(letter2)
                 elif image2.is_prefix(image1):
-                    k_wip[letter1] = image1[image2.length():]
+                    k[letter1] = image1[image2.length():]
                     to_do.add(letter1)
                     break
                 elif image2.is_suffix(image1):
-                    k_wip[letter1] = image1[:-image2.length()]
+                    k[letter1] = image1[:-image2.length()]
                     to_do.add(letter1)
                     break
             for letter in to_remove:
-                del k_wip[letter]
+                del k[letter]
             to_remove = []
 
-        if len(k_wip) == len(f):
+        if len(k) == len(f):
             raise ValueError(f'failed to simplify {self}')
 
-        k = {letter : image for letter, image in zip(Z, k_wip.values())}
+        h = {}
+        for letter1, image1 in f.items():
+            image3 = []
+            while image1:
+                for letter2, image2 in k.items():
+                    if image2.is_prefix(image1):
+                        image1 = image1[image2.length():]
+                        image3.append(letter2)
+                        break
+            h[letter1] = image3
 
-    # Find h by using k on f "in reverse".
-    h = {}
-    for letter1, image1 in f.items():
-        image3 = []
-        while image1:
-            for letter2, image2 in k.items():
-                if image2.is_prefix(image1):
-                    image1 = image1[image2.length():]
-                    image3.append(letter2)
-                    break
-        h[letter1] = image3
+    k = type(self)(k, codomain=self.codomain())
+    h = type(self)(h, domain=self.domain(), codomain=k.domain())
 
-    Z_star = FiniteWords(Z[:len(k)])
-    h = type(self)(h, domain=self.domain(), codomain=Z_star)
-    k = type(self)(k, domain=Z_star, codomain=self.codomain())
+    if Z: # Custom alphabet.
+        old_Z_star = k.domain()
+        old_Z = old_Z_star.alphabet()
+        Z = [z for z, _ in zip(Z, old_Z)]
+        if len(Z) < len(old_Z):
+            raise ValueError(f'Z should have length at least {len(old_Z)}, is {len(Z)}')
+        Z_star = FiniteWords(Z)
+        h_new = {old : [new] for old, new in zip(old_Z, Z)}
+        k_new = {new : [old] for new, old in zip(Z, old_Z)}
+        h_new = type(self)(h_new, domain=old_Z_star, codomain=Z_star)
+        k_new = type(self)(k_new, domain=Z_star, codomain=old_Z_star)
+        h = h_new * h
+        k = k * k_new
+
     return h, k
 
 def simplify_injective(self, Z=None):
@@ -512,9 +520,9 @@ def simplify_injective(self, Z=None):
         if not Z:
             Z = Y
         if len(Z) < len(Y):
-            raise ValueError(f'alphabet should have length at least {len(Y)}, is {len(Z)}')
-        Z_star = FiniteWords(Z[:len(Y)])
+            raise ValueError(f'Z should have length at least {len(Y)}, is {len(Z)}')
 
+        Z_star = FiniteWords(Z[:len(Y)])
         k = type(self)({z : [y] for y, z in zip(Y, Z)}, domain=Z_star, codomain=Y_star)
         k_inverse = type(self)({y : [z] for y, z in zip(Y, Z)}, domain=Y_star, codomain=Z_star)
         h = k_inverse * self
