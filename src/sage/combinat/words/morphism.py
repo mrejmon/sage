@@ -3166,6 +3166,7 @@ class WordMorphism(SageObject):
 
     # Probably temporary.
     from .DOL import ( # * doesn't work here.
+        mortal_letters,
         is_injective,
         infinite_repetitions,
         infinite_repetitions_bounded,
