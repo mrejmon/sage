@@ -44,21 +44,70 @@ def _test(logger=None):
         return wrapper
     return decorator
 
-@_test([0, 0])
-def test_infinite_repetitions(f, debug, logger):
-    if f.is_erasing():
-        return
-    logger[0] += 1
+def _testW(logger=None):
+    def decorator(f):
+        @wraps(f)
+        def wrapper(cnt=10000, seed=18, debug=False, **kwargs):
+            W = FiniteWords(5)
+            for i in range(cnt):
+                print(f'\r{i}' + (' ' * 50), end='')
+                w = W.random_element()
+                if debug: print(f'\n{w}')
+                f(w, debug, logger, **kwargs)
+            print(f'\r{cnt}')
+            return logger
+        return wrapper
+    return decorator
 
+@_test()
+def test_reach(f, debug, logger):
+    pop = f.domain().alphabet()
+    word_size = random.randint(1, 3)
+    w = random.choices(pop, k=word_size)
+    res1 = f.reach(w)
+    v = w
+    L = set(v)
+    for _ in range(len(pop)):
+        v = f(v)
+        L.add(v)
+    res2 = set()
+    for u in L:
+        res2.update(u)
+    if res1 != res2:
+        print('!!!!!!!!!!!!!')
+        print(f)
+        print(w)
+        print(res1)
+        print(res2)
+        assert(False)
+
+@_testW()
+def test_smallest_cyclic_shift(input, debug, logger):
+    res = input.smallest_cyclic_shift()
+    if debug: print(res)
+    real = input
+    for x in input.conjugates_iterator():
+        if x < real:
+            real = x
+    if res != real:
+        print('!!!!!!!!!!!!!')
+        print(f'input: {input}')
+        print(f'res: {res}')
+        print(f'real: {real}')
+        assert(False)
+
+@_test([0])
+def test_infinite_repetitions(f, debug, logger):
+    g, _, _, _ = f.simplify_injective()
     limit = 6+1
-    SL = f._language_naive(limit, f.domain()(list(f.domain().alphabet())))
-    inf_reps = f.infinite_repetitions()
+    SL = g._language_naive(limit, g.domain()(list(g._morph)))
+    inf_reps = g.infinite_repetitions()
     for inf_rep in inf_reps:
         for i in range(1, 5):
             q = len(inf_rep) * i
             if q >= limit:
                 continue
-            logger[1] += 1
+            logger[0] += 1
             if inf_rep ** i not in SL:
                 print(f)
                 print(inf_rep, i)
@@ -97,15 +146,16 @@ def _necessary_condition_for_elementary(self):
             return True
     return False
 
-@_test([0])
+@_test([0, 0])
 def test_simplify_injective(f, debug, logger):
-    try:
-        g, h, k, i = f.simplify_injective(string.ascii_uppercase)
-    except ValueError:
+    g, h, k, i = f.simplify_injective()
+    if i == 0:
         if debug: print('failed to simplify')
         assert(f.is_injective())
         return
     logger[0] += 1
+    if i > 1:
+        logger[1] += 1
     if debug: print(f'g: {g}\nh: {h}\nk: {k}\ni: {i}')
     assert(len(g._domain.alphabet()) < len(f._domain.alphabet()))
     assert(g.is_injective())
@@ -118,7 +168,7 @@ def test_simplify_injective(f, debug, logger):
     if debug: print(f'fi: {fi}\nfi?: {fi2}')
     assert(fi == fi2)
 
-@_test()
+@_test() # broke
 def find_counter_examples(h, debug, logger):
     if len(h._morph) == len(set().union(*h._morph.values())):
         try:

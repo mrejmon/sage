@@ -7140,10 +7140,17 @@ class FiniteWord_class(Word_class):
         else:
             return False
 
-    # Probably temporary.
-    from .DOL import ( # * doesn't work here.
-        smallest_cyclic_shift,
-    )
+    def smallest_cyclic_shift(self):
+        """
+        """
+        start, end = 0, 0
+        s2 = self**2
+        for s in s2.lyndon_factorization():
+            start = end
+            end += s.length()
+            if start < self.length() and end >= self.length():
+                break
+        return s2[start:start+self.length()]
 
 
 #######################################################################

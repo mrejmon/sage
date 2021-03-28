@@ -5,46 +5,6 @@ from sage.rings.all import ZZ
 from sage.combinat.words.words import FiniteWords
 from sage.combinat.words.morphism import get_cycles
 
-# finite_word.py
-def smallest_cyclic_shift(self, w):
-    """
-    """
-    start, end = 0, 0
-    s2 = self**2
-    for s in s2.lyndon_factorization():
-        start = end
-        end += s.length()
-        if start < self.length() and end > self.length():
-            break
-    return s2[start:end]
-
-# morphism.py
-def reach(self, w):
-    r"""
-    Return the set of letters which occur in words of `\{m^n(w) | n \ge 0}`,
-    where `m` is this morphism and `w` is a word (finite iterable is enough)
-    inputted as a parameter.
-
-    Requires this morphism to be an endomorphism.
-
-    EXAMPLES::
-
-        sage: sorted(WordMorphism('a->abc,b->bb,c->bd,d->dd').reach('c'))
-        sage: ['b', 'c', 'd']
-    """
-    if not self.is_endomorphism():
-        raise TypeError(f'self ({self}) is not an endomorphism')
-
-    visited = set(w)
-    todo = list(visited)
-    while todo:
-        a = todo.pop()
-        for b in self.image(a):
-            if b not in visited:
-                visited.add(b)
-                todo.append(b)
-    return visited
-
 def is_injective(self):
     """
     Return whether this morphism is injective.
@@ -91,10 +51,98 @@ def is_injective(self):
 
     return True
 
+def is_pushy(self, w=None):
+    r"""
+    Return whether the language `\{m^n(w) | n \ge 0\}` is pushy,
+    where `m` is this morphism and `w` is a word inputted as a parameter.
+
+    Requires this morphism to be an endomorphism.
+
+    A language created by an iteration of a morphism is pushy iff its words
+    contain an infinite number of factors containing no growing letters. It
+    turns out that this is equivalent to having at least one infinite repetition
+    containing no growing letters.
+
+    See :meth:`infinite_repetitions` and :meth:`is_growing`.
+
+    INPUT:
+
+    - ``w`` -- finite iterable representing a word used to start the language,
+      default is ``self.domain().alphabet()``
+
+    EXAMPLES::
+
+        sage: WordMorphism('a->abca,b->bc,c->').is_pushy()
+        False
+        sage: WordMorphism('a->abc,b->,c->bcb').is_pushy()
+        True
+    """
+    return bool(self.infinite_repetitions_bounded(w))
+
+def is_unboundedly_repetitive(self, w=None):
+    r"""
+    Return whether the language `\{m^n(w) | n \ge 0\}` is unboundedly repetitive,
+    where `m` is this morphism and `w` is a word inputted as a parameter.
+
+    Requires this morphism to be an endomorphism.
+
+    A language created by an iteration of a morphism is unboundedly repetitive
+    iff it has at least one infinite repetition containing at least one growing
+    letter.
+
+    See :meth:`infinite_repetitions` and :meth:`is_growing`.
+
+    INPUT:
+
+    - ``w`` -- finite iterable representing a word used to start the language,
+      default is ``self.domain().alphabet()``
+
+    EXAMPLES::
+
+        sage: WordMorphism('a->abca,b->bc,c->').is_unboundedly_repetitive()
+        True
+        sage: WordMorphism('a->abc,b->,c->bcb').is_unboundedly_repetitive()
+        False
+    """
+    return bool(self.infinite_repetitions_growing(w))
+
+def is_repetitive(self, w=None):
+    r"""
+    Return whether the language `\{m^n(w) | n \ge 0\}` is repetitive,
+    where `m` is this morphism and `w` is a word inputted as a parameter.
+
+    Requires this morphism to be an endomorphism.
+
+    A language is repetitive iff for each positive integer `k` there exists a
+    word `u` such that `u^k` is a factor of some word of the language.
+
+    It turns that for languages created by iteration of a morphism this is
+    equivalent to having at least one infinite repetition (this property is
+    also known as strong repetitiveness).
+
+    See :meth:`infinite_repetitions`.
+
+    INPUT:
+
+    - ``w`` -- finite iterable representing a word used to start the language,
+      default is ``self.domain().alphabet()``
+
+    EXAMPLES:
+
+    This can be used for checking whether an infinite word created by
+    iteration of a morphism is NOT k-power free for all positive integers k::
+
+        sage: WordMorphism('a->ab,b->ab').is_repetitive()
+        True
+        sage: WordMorphism('a->ab,b->ba').is_repetitive()
+        False
+    """
+    return self.is_pushy(w) or self.is_unboundedly_repetitive(w)
+
 def infinite_repetitions(self, w=None):
     r"""
     Return (except for conjugation) the set of primitive infinite repetitions
-    from the language `\{m^n(w) | n \ge 0}`, where `m` is this morphism and
+    from the language `\{m^n(w) | n \ge 0\}`, where `m` is this morphism and
     `w` is a word inputted as a parameter.
 
     Requires this morphism to be an endomorphism.
@@ -114,12 +162,8 @@ def infinite_repetitions(self, w=None):
 
     INPUT:
 
-    - ``w`` -- finite iterable representing a word in the domain of this
-      morphism used as a *seed*, default is ``self.domain().alphabet()``
-
-    ALGORITHM:
-
-    The algorithm used is described in detail in [KS2015]_.
+    - ``w`` -- finite iterable representing a word used to start the language,
+      default is ``self.domain().alphabet()``
 
     EXAMPLES::
 
@@ -144,7 +188,7 @@ def infinite_repetitions_bounded(self, w=None):
     r"""
     Return (except for conjugation) the set of primitive infinite repetitions,
     which contain no growing letters,
-    from the language `\{m^n(w) | n \ge 0}`, where `m` is this morphism and
+    from the language `\{m^n(w) | n \ge 0\}`, where `m` is this morphism and
     `w` is a word inputted as a parameter.
 
     Requires this morphism to be an endomorphism.
@@ -153,8 +197,12 @@ def infinite_repetitions_bounded(self, w=None):
 
     INPUT:
 
-    - ``w`` -- finite iterable representing a word in the domain of this
-      morphism used as a *seed*, default is ``self.domain().alphabet()``
+    - ``w`` -- finite iterable representing a word used to start the language,
+      default is ``self.domain().alphabet()``
+
+    ALGORITHM:
+
+    The algorithm used is described in detail in [KS2015]_.
 
     EXAMPLES::
 
@@ -193,7 +241,7 @@ def infinite_repetitions_bounded(self, w=None):
                 q = len(cycle)
                 l0 = (s / q).ceil() * q
                 l1 = l0 + (t.lcm(q) / q)
-                gq = g.restrict_domain(bounded) ** q
+                gq = gb ** q
                 uql = gq(u, l0)
                 res = g.domain()()
                 for _ in range(l0+1, l1+1):
@@ -206,7 +254,7 @@ def infinite_repetitions_bounded(self, w=None):
     f = self.restrict_domain(self.reach(w))
     g, _, k, _ = f.simplify_injective()
     unbounded = set(g.growing_letters())
-    bounded = set(g._morph) - unbounded
+    gb = g.restrict_domain(set(g._morph) - unbounded)
 
     result = set()
     for x in impl():
@@ -218,10 +266,10 @@ def infinite_repetitions_bounded(self, w=None):
     return result
 
 def infinite_repetitions_growing(self, w=None):
-    """
+    r"""
     Return (except for conjugation) the set of primitive infinite repetitions,
     which contain at least one growing letter,
-    from the language `\{m^n(w) | n \ge 0}`, where `m` is this morphism and
+    from the language `\{m^n(w) | n \ge 0\}`, where `m` is this morphism and
     `w` is a word inputted as a parameter.
 
     Requires this morphism to be an endomorphism.
@@ -230,8 +278,12 @@ def infinite_repetitions_growing(self, w=None):
 
     INPUT:
 
-    - ``w`` -- finite iterable representing a word in the domain of this
-      morphism used as a *seed*, default is ``self.domain().alphabet()``
+    - ``w`` -- finite iterable representing a word used to start the language,
+      default is ``self.domain().alphabet()``
+
+    ALGORITHM:
+
+    The algorithm used is described in detail in [KS2015]_.
 
     EXAMPLES::
 
@@ -281,93 +333,31 @@ def infinite_repetitions_growing(self, w=None):
 
     return result
 
-def is_repetitive(self, w=None):
-    """
-    Return whether the language `\{m^n(w) | n \ge 0}` is repetitive,
-    where `m` is this morphism and `w` is a word inputted as a parameter.
+def reach(self, w):
+    r"""
+    Return the set of letters which occur in words of `\{m^n(w) | n \ge 0\}`,
+    where `m` is this morphism and `w` is a word (finite iterable is enough)
+    inputted as a parameter.
 
     Requires this morphism to be an endomorphism.
-
-    A language is repetitive iff for each positive integer `k` there exists a
-    word `u` such that `u^k` is a factor of some word of the language.
-
-    It turns that for languages created by iteration of a morphism this is
-    equivalent to having at least one infinite repetition (this property is
-    also known as strong repetitiveness).
-
-    See :meth:`infinite_repetitions`.
-
-    INPUT:
-
-    - ``w`` -- finite iterable representing a word in the domain of this
-      morphism used as a *seed*, default is ``self.domain().alphabet()``
-
-    EXAMPLES:
-
-    This can be used for checking whether an infinite word created by
-    iteration of a morphism is NOT k-power free for all positive integers k::
-
-        sage: WordMorphism('a->ab,b->ab').is_repetitive()
-        True
-        sage: WordMorphism('a->ab,b->ba').is_repetitive()
-        False
-    """
-    return self.is_pushy(w) or self.is_unboundedly_repetitive(w)
-
-def is_pushy(self, w=None):
-    """
-    Return whether the language `\{m^n(w) | n \ge 0}` is pushy,
-    where `m` is this morphism and `w` is a word inputted as a parameter.
-
-    Requires this morphism to be an endomorphism.
-
-    A language created by an iteration of a morphism is pushy iff its words
-    contain an infinite number of factors containing no growing letters. It
-    turns out that this is equivalent to having at least one infinite repetition
-    containing no growing letters.
-
-    See :meth:`infinite_repetitions` and :meth:`is_growing`.
-
-    INPUT:
-
-    - ``w`` -- finite iterable representing a word in the domain of this
-      morphism used as a *seed*, default is ``self.domain().alphabet()``
 
     EXAMPLES::
 
-        sage: WordMorphism('a->abca,b->bc,c->').is_pushy()
-        False
-        sage: WordMorphism('a->abc,b->,c->bcb').is_pushy()
-        True
+        sage: sorted(WordMorphism('a->abc,b->bb,c->bd,d->dd').reach('c'))
+        sage: ['b', 'c', 'd']
     """
-    return bool(self.infinite_repetitions_bounded(w))
+    if not self.is_endomorphism():
+        raise TypeError(f'self ({self}) is not an endomorphism')
 
-def is_unboundedly_repetitive(self, w=None):
-    """
-    Return whether the language `\{m^n(w) | n \ge 0}` is unboundedly repetitive,
-    where `m` is this morphism and `w` is a word inputted as a parameter.
-
-    Requires this morphism to be an endomorphism.
-
-    A language created by an iteration of a morphism is unboundedly repetitive
-    iff it has at least one infinite repetition containing at least one growing
-    letter.
-
-    See :meth:`infinite_repetitions` and :meth:`is_growing`.
-
-    INPUT:
-
-    - ``w`` -- finite iterable representing a word in the domain of this
-      morphism used as a *seed*, default is ``self.domain().alphabet()``
-
-    EXAMPLES::
-
-        sage: WordMorphism('a->abca,b->bc,c->').is_unboundedly_repetitive()
-        True
-        sage: WordMorphism('a->abc,b->,c->bcb').is_unboundedly_repetitive()
-        False
-    """
-    return bool(self.infinite_repetitions_growing(w))
+    visited = set(w)
+    todo = list(visited)
+    while todo:
+        a = todo.pop()
+        for b in self.image(a):
+            if b not in visited:
+                visited.add(b)
+                todo.append(b)
+    return visited
 
 def simplify(self, Z=None):
     r"""
@@ -449,7 +439,7 @@ def simplify(self, Z=None):
         h = {letter : [letter] if image else [] for letter, image in f.items()}
     elif len(Y) < len(X): # Trivial case #2.
         k = {x : [y] for x, y in zip(X, Y)}
-        k_inverse = {y : [x] for x, y in zip(X, Y)}
+        k_inverse = {y : x for y, x in zip(Y, X)}
         h = {x : [k_inverse[y] for y in image] for x, image in f.items()}
     else: # Non-trivial case.
         k = dict(f)
@@ -524,10 +514,11 @@ def simplify_injective(self):
 
     Requires this morphism to be an endomorphism.
 
-    Basically calls :meth:`simplify` until the result is injective. If this
-    morphism is already injective, instead of raising an exception a quadruplet
-    `(g, h, k, i)` is still returned, where `g` and `h` are equal to this
-    morphism, `k` is the identity morphism and `i` is 0.
+    Basically calls :meth:`simplify` until it throws an exception, which means
+    the input was injective. If already the first call raises an exception,
+    instead of reraising it a quadruplet `(g, h, k, i)` is still returned,
+    where `g` and `h` are equal to this morphism, `k` is the identity morphism
+    and `i` is 0.
 
     Let `f: X^* \rightarrow Y^*` be a morphism and `Y \subseteq X`. Then
     `g: Z^* \rightarrow Z^*` is an injective simplification of `f` with respect
