@@ -21,8 +21,9 @@ def smallest_cyclic_shift(self, w):
 # morphism.py
 def reach(self, w):
     r"""
-    Return the set of letters which occur in words of `{m^n(w) | n \in \NN}`,
-    where `m` is this morphism and `w` is a word inputted as a parameter.
+    Return the set of letters which occur in words of `\{m^n(w) | n \ge 0}`,
+    where `m` is this morphism and `w` is a word (finite iterable is enough)
+    inputted as a parameter.
 
     Requires this morphism to be an endomorphism.
 
@@ -87,23 +88,34 @@ def is_injective(self):
                 return False
             check(u, v)
             check(v, u)
+
     return True
 
 def infinite_repetitions(self, w=None):
     r"""
-    Return the set of all primitive infinite repetitions of the D0L system made
-    from this morphism and an arbitrary axiom, from which all letters are
-    accessible.
+    Return (except for conjugation) the set of primitive infinite repetitions
+    from the language `\{m^n(w) | n \ge 0}`, where `m` is this morphism and
+    `w` is a word inputted as a parameter.
 
     Requires this morphism to be an endomorphism.
 
-    A D0L system is a triplet `(A, \varphi, w)`, where `A` is an alphabet,
-    `\varphi` a morphism on `A^*` and `w` a non-empty word (called axiom).
-    The language of a D0L system is the set `\{\varphi^k(w) | k \in \NN\}`.
+    A non-empty word `v` is an infinite repetition (also known as an infinite
+    periodic factor) of a language iff for each positive integer `k` the word
+    `v^k` is a factor of some word from the language.
 
-    An infinite repetition (aka an infinite periodic factor) of a D0L system is
-    a non-empty word `w` such that `w^k` is a factor of a word of the language
-    of the system for all positive integers `k`.
+    If `v` is an infinite repetition, then all its powers are also infinite
+    repetitions, therefore this method returns only the primitive ones. It turns
+    out that a language created by iteration of a morphism has a finite number
+    of primitive infinite repetitions.
+
+    Similarly, if `v` is an infinite repetition, then all its conjugates are
+    also infinite repetitions, therefore this method returns only the
+    lexicographically smallest one from each conjugacy class.
+
+    INPUT:
+
+    - ``w`` -- finite iterable representing a word in the domain of this
+      morphism used as a *seed*, default is ``self.domain().alphabet()``
 
     ALGORITHM:
 
@@ -129,14 +141,20 @@ def infinite_repetitions(self, w=None):
     return self.infinite_repetitions_bounded(w) | self.infinite_repetitions_growing(w)
 
 def infinite_repetitions_bounded(self, w=None):
-    """
-    Return the set of all primitive infinite repetitions, which contain no
-    growing letters, of the D0L system made from this morphism and an arbitrary
-    axiom, from which all letters are accessible.
+    r"""
+    Return (except for conjugation) the set of primitive infinite repetitions,
+    which contain no growing letters,
+    from the language `\{m^n(w) | n \ge 0}`, where `m` is this morphism and
+    `w` is a word inputted as a parameter.
 
     Requires this morphism to be an endomorphism.
 
     See :meth:`infinite_repetitions` and :meth:`is_growing`.
+
+    INPUT:
+
+    - ``w`` -- finite iterable representing a word in the domain of this
+      morphism used as a *seed*, default is ``self.domain().alphabet()``
 
     EXAMPLES::
 
@@ -201,13 +219,19 @@ def infinite_repetitions_bounded(self, w=None):
 
 def infinite_repetitions_growing(self, w=None):
     """
-    Return the set of all primitive infinite repetitions, which contain at least
-    one growing letter, of the D0L system made from this morphism and an
-    arbitrary axiom, from which all letters are accessible.
+    Return (except for conjugation) the set of primitive infinite repetitions,
+    which contain at least one growing letter,
+    from the language `\{m^n(w) | n \ge 0}`, where `m` is this morphism and
+    `w` is a word inputted as a parameter.
 
     Requires this morphism to be an endomorphism.
 
     See :meth:`infinite_repetitions` and :meth:`is_growing`.
+
+    INPUT:
+
+    - ``w`` -- finite iterable representing a word in the domain of this
+      morphism used as a *seed*, default is ``self.domain().alphabet()``
 
     EXAMPLES::
 
@@ -259,21 +283,29 @@ def infinite_repetitions_growing(self, w=None):
 
 def is_repetitive(self, w=None):
     """
-    Return whether the D0L system made from this morphism and an arbitrary
-    axiom, from which all letters are accessible, is repetitive.
+    Return whether the language `\{m^n(w) | n \ge 0}` is repetitive,
+    where `m` is this morphism and `w` is a word inputted as a parameter.
 
     Requires this morphism to be an endomorphism.
 
-    A D0L system is repetitive iff for all positive integers `k` there is a
-    non-empty word `w` such that `w^k` is a factor of a word of the language of
-    the system. Therefore if a D0L system is not repetitive it must be k-power
-    free for some `k`. It turns out that for D0L systems repetitiveness is
-    equivalent to having at least one infinite repetition (aka strong
-    repetitiveness).
+    A language is repetitive iff for each positive integer `k` there exists a
+    word `u` such that `u^k` is a factor of some word of the language.
+
+    It turns that for languages created by iteration of a morphism this is
+    equivalent to having at least one infinite repetition (this property is
+    also known as strong repetitiveness).
 
     See :meth:`infinite_repetitions`.
 
-    EXAMPLES::
+    INPUT:
+
+    - ``w`` -- finite iterable representing a word in the domain of this
+      morphism used as a *seed*, default is ``self.domain().alphabet()``
+
+    EXAMPLES:
+
+    This can be used for checking whether an infinite word created by
+    iteration of a morphism is NOT k-power free for all positive integers k::
 
         sage: WordMorphism('a->ab,b->ab').is_repetitive()
         True
@@ -284,17 +316,22 @@ def is_repetitive(self, w=None):
 
 def is_pushy(self, w=None):
     """
-    Return whether the D0L system made from this morphism and an arbitrary
-    axiom, from which all letters are accessible, is pushy.
+    Return whether the language `\{m^n(w) | n \ge 0}` is pushy,
+    where `m` is this morphism and `w` is a word inputted as a parameter.
 
     Requires this morphism to be an endomorphism.
 
-    A D0L system is pushy iff it has an infinite amount of factors (of words
-    of the language of the system) containing no growing letters. It turns out
-    that this is equivalent to having at least one infinite repetition
+    A language created by an iteration of a morphism is pushy iff its words
+    contain an infinite number of factors containing no growing letters. It
+    turns out that this is equivalent to having at least one infinite repetition
     containing no growing letters.
 
     See :meth:`infinite_repetitions` and :meth:`is_growing`.
+
+    INPUT:
+
+    - ``w`` -- finite iterable representing a word in the domain of this
+      morphism used as a *seed*, default is ``self.domain().alphabet()``
 
     EXAMPLES::
 
@@ -307,15 +344,21 @@ def is_pushy(self, w=None):
 
 def is_unboundedly_repetitive(self, w=None):
     """
-    Return whether the D0L system made from this morphism and an arbitrary
-    axiom, from which all letters are accessible, is unboundedly repetitive.
+    Return whether the language `\{m^n(w) | n \ge 0}` is unboundedly repetitive,
+    where `m` is this morphism and `w` is a word inputted as a parameter.
 
     Requires this morphism to be an endomorphism.
 
-    A D0L system is unboundedly repetitive iff it has at least one infinite
-    repetition containing at least one growing letter.
+    A language created by an iteration of a morphism is unboundedly repetitive
+    iff it has at least one infinite repetition containing at least one growing
+    letter.
 
     See :meth:`infinite_repetitions` and :meth:`is_growing`.
+
+    INPUT:
+
+    - ``w`` -- finite iterable representing a word in the domain of this
+      morphism used as a *seed*, default is ``self.domain().alphabet()``
 
     EXAMPLES::
 
@@ -387,8 +430,11 @@ def simplify(self, Z=None):
         Traceback (most recent call last):
         ...
         ValueError: failed to simplify a->abcc, b->abcd, c->abdc, d->abdd
-        sage: h = WordMorphism('a->xyy,b->xyz,c->xzy,d->xzz')
+
+    Proof that the above morphism is simplifiable::
+
         sage: k = WordMorphism('x->ab,y->c,z->d')
+        sage: h = WordMorphism('a->xyy,b->xyz,c->xzy,d->xzz')
         sage: k * h == f
         True
         sage: g = h * k; g
