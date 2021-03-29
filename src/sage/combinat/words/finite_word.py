@@ -7140,8 +7140,23 @@ class FiniteWord_class(Word_class):
         else:
             return False
 
-    def smallest_cyclic_shift(self):
+    def minimal_conjugate(self):
         """
+        Return the lexicographically minimal conjugate of this word.
+
+        ALGORITHM:
+
+        Taken from `here <https://cp-algorithms.com/string/lyndon_factorization.html>`
+        (bottom of the page).
+
+        EXAMPLES::
+
+            sage: Word('213').minimal_conjugate()
+            word: 132
+            sage: Word('111').minimal_conjugate()
+            word: 111
+            sage: Word('12112').minimal_conjugate()
+            word: 11212
         """
         start, end = 0, 0
         s2 = self**2
@@ -7151,7 +7166,6 @@ class FiniteWord_class(Word_class):
             if start < self.length() and end >= self.length():
                 break
         return s2[start:start+self.length()]
-
 
 #######################################################################
 

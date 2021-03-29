@@ -82,8 +82,8 @@ def test_reach(f, debug, logger):
         assert(False)
 
 @_testW()
-def test_smallest_cyclic_shift(input, debug, logger):
-    res = input.smallest_cyclic_shift()
+def test_minimal_conjugate(input, debug, logger):
+    res = input.minimal_conjugate()
     if debug: print(res)
     real = input
     for x in input.conjugates_iterator():
